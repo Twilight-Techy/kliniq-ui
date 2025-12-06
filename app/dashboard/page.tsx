@@ -126,6 +126,11 @@ export default function PatientDashboard() {
   const [inputValue, setInputValue] = useState("")
   const [isRecording, setIsRecording] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showEmergency, setShowEmergency] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null)
+  const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
+  const [showTranscript, setShowTranscript] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -179,13 +184,35 @@ export default function PatientDashboard() {
   }
 
   const toggleRecording = () => {
-    setIsRecording(!isRecording)
     if (!isRecording) {
-      // Simulate voice recording
+      // Start recording
+      setIsRecording(true)
+    } else {
+      // Stop recording and send as audio message
+      setIsRecording(false)
+
+      const audioMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: "🎤 Voice message recorded",
+        timestamp: new Date(),
+        isAudio: true,
+      }
+
+      setMessages((prev) => [...prev, audioMessage])
+      setIsTyping(true)
+
+      // Simulate AI processing audio and responding
       setTimeout(() => {
-        setIsRecording(false)
-        setInputValue("My head has been hurting since morning")
-      }, 2000)
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "I've received your voice message. I'm analyzing it now... Based on what you've described, I recommend booking an appointment with Dr. Adeyemi. Would you like me to schedule that for you?",
+          timestamp: new Date(),
+        }
+        setIsTyping(false)
+        setMessages((prev) => [...prev, aiResponse])
+      }, 1500)
     }
   }
 
@@ -221,7 +248,10 @@ export default function PatientDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-xl hover:bg-secondary transition-colors"
+              >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
               </button>
@@ -231,6 +261,126 @@ export default function PatientDashboard() {
             </div>
           </div>
         </header>
+
+        {/* Notification Dropdown Panel */}
+        <AnimatePresence>
+          {showNotifications && (
+            <div className="relative z-40">
+              <div className="fixed inset-0" onClick={() => setShowNotifications(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute right-4 sm:right-6 top-2 w-80 bg-card border border-border/50 rounded-2xl shadow-xl overflow-hidden z-50"
+              >
+                <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-accent/5">
+                  <h3 className="font-semibold text-foreground">Notifications</h3>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {[
+                    { title: "Appointment Reminder", message: "Dr. Adeyemi tomorrow at 10:00 AM", time: "1h ago", unread: true },
+                    { title: "Prescription Ready", message: "Your medication is ready for pickup", time: "3h ago", unread: true },
+                    { title: "Lab Results", message: "Blood test results are now available", time: "1d ago", unread: false },
+                  ].map((notif, idx) => (
+                    <div key={idx} className={cn("p-4 border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer", notif.unread && "bg-primary/5")}>
+                      <div className="flex items-start gap-3">
+                        {notif.unread && <div className="w-2 h-2 rounded-full bg-primary mt-2" />}
+                        <div className="flex-1">
+                          <p className="font-medium text-sm text-foreground">{notif.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{notif.message}</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">{notif.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-3 border-t border-border/50">
+                  <button className="w-full text-center text-sm text-primary hover:underline">
+                    View All Notifications
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Emergency Contact Modal */}
+        <AnimatePresence>
+          {showEmergency && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowEmergency(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-card border border-destructive/50 rounded-3xl shadow-2xl overflow-hidden z-50"
+              >
+                <div className="p-6 border-b border-border/50 bg-gradient-to-r from-destructive/10 to-destructive/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-destructive/20 flex items-center justify-center">
+                      <Phone className="w-6 h-6 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground">Emergency Contacts</h3>
+                      <p className="text-sm text-muted-foreground">Get help immediately</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <a
+                    href="tel:112"
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 hover:bg-destructive/20 transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-destructive flex items-center justify-center">
+                      <Phone className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">Emergency Hotline</p>
+                      <p className="text-2xl font-bold text-destructive">112</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-destructive group-hover:translate-x-1 transition-transform" />
+                  </a>
+
+                  <a
+                    href="tel:+2348001234567"
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+                      <Stethoscope className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">Hospital Reception</p>
+                      <p className="text-lg font-bold text-primary">+234 800 123 4567</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
+                  </a>
+
+                  <button
+                    onClick={() => window.location.href = "/dashboard/appointments"}
+                    className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-secondary hover:bg-secondary/80 transition-colors"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    <span className="font-medium">Schedule Urgent Appointment</span>
+                  </button>
+                </div>
+                <div className="p-4 border-t border-border/50">
+                  <button
+                    onClick={() => setShowEmergency(false)}
+                    className="w-full p-3 rounded-xl text-sm text-muted-foreground hover:bg-secondary transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
           {/* Quick Actions */}
@@ -243,6 +393,24 @@ export default function PatientDashboard() {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (action.label === "New Triage") {
+                    // Start a fresh triage session
+                    setMessages([{
+                      id: Date.now().toString(),
+                      role: "assistant",
+                      content: "Ẹ káàbọ̀! Welcome back, Adebayo. How can I help you today? You can ask me about your medications, previous consultations, or describe any symptoms you're experiencing.",
+                      timestamp: new Date(),
+                    }])
+                    setActiveTab("chat")
+                  } else if (action.label === "Medical Records") {
+                    window.location.href = "/dashboard/history"
+                  } else if (action.label === "Book Appointment") {
+                    window.location.href = "/dashboard/appointments"
+                  } else if (action.label === "Emergency") {
+                    setShowEmergency(true)
+                  }
+                }}
                 className="relative group p-5 rounded-2xl bg-card border border-border/50 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -325,21 +493,42 @@ export default function PatientDashboard() {
                       >
                         <div
                           className={cn(
-                            "max-w-[85%] p-4 rounded-2xl",
+                            "max-w-[85%] rounded-2xl",
                             message.role === "user"
                               ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-br-md"
                               : "bg-secondary/50 text-foreground rounded-bl-md",
                           )}
                         >
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                          <p
-                            className={cn(
-                              "text-xs mt-2",
-                              message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground",
+                          <div className="p-4">
+                            <p className="text-sm leading-relaxed">{message.content}</p>
+                            {message.isAudio && (
+                              <button
+                                onClick={() => setShowTranscript(showTranscript === message.id ? null : message.id)}
+                                className="mt-2 text-xs underline opacity-70 hover:opacity-100 transition-opacity"
+                              >
+                                {showTranscript === message.id ? "Hide Transcript" : "Show Transcript"}
+                              </button>
                             )}
-                          >
-                            {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </p>
+                            {message.isAudio && showTranscript === message.id && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-3 pt-3 border-t border-primary-foreground/20"
+                              >
+                                <p className="text-xs opacity-70 mb-1">Transcribed:</p>
+                                <p className="text-sm">"My head has been hurting since this morning"</p>
+                              </motion.div>
+                            )}
+                            <p
+                              className={cn(
+                                "text-xs mt-2",
+                                message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground",
+                              )}
+                            >
+                              {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
                         </div>
                       </motion.div>
                     ))}
@@ -460,7 +649,10 @@ export default function PatientDashboard() {
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-foreground">Upcoming Appointments</h2>
-                  <Button className="bg-gradient-to-r from-primary to-primary/80">
+                  <Button
+                    onClick={() => window.location.href = "/dashboard/appointments"}
+                    className="bg-gradient-to-r from-primary to-primary/80"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Book New
                   </Button>
@@ -506,13 +698,66 @@ export default function PatientDashboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-4">
-                          <Button variant="outline" size="sm" className="flex-1 rounded-xl bg-transparent">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Navigate to appointments page for rescheduling
+                              window.location.href = "/dashboard/appointments"
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 rounded-xl bg-transparent"
+                          >
                             Reschedule
                           </Button>
-                          <Button size="sm" className="flex-1 rounded-xl bg-primary hover:bg-primary/90">
-                            {apt.type === "video" ? "Join Call" : "View Details"}
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedAppointment(selectedAppointment === apt.id ? null : apt.id)
+                            }}
+                            size="sm"
+                            className="flex-1 rounded-xl bg-primary hover:bg-primary/90"
+                          >
+                            {apt.type === "video" ? (selectedAppointment === apt.id ? "Close" : "Join Call") : (selectedAppointment === apt.id ? "Close" : "View Details")}
                           </Button>
                         </div>
+
+                        {/* Expandable Details */}
+                        <AnimatePresence>
+                          {selectedAppointment === apt.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-4 pt-4 border-t border-border/50 space-y-2"
+                            >
+                              {apt.type === "video" ? (
+                                <>
+                                  <p className="text-sm font-medium text-foreground">Video Call Link</p>
+                                  <button className="w-full p-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-colors flex items-center justify-center gap-2">
+                                    <Video className="w-4 h-4" />
+                                    Launch Video Call
+                                  </button>
+                                  <p className="text-xs text-muted-foreground">The call will start in your browser</p>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                      <p className="text-muted-foreground">Type</p>
+                                      <p className="font-medium">In-Person</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground">Location</p>
+                                      <p className="font-medium">Hospital Reception</p>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-2">Please arrive 10 minutes early</p>
+                                </>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </motion.div>
                   ))}
@@ -530,7 +775,11 @@ export default function PatientDashboard() {
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-foreground">My Linked Doctors</h2>
-                  <Button variant="outline" className="rounded-xl bg-transparent">
+                  <Button
+                    onClick={() => window.location.href = "/dashboard/appointments"}
+                    variant="outline"
+                    className="rounded-xl bg-transparent"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Link New Doctor
                   </Button>
@@ -546,21 +795,55 @@ export default function PatientDashboard() {
                       className="group relative p-5 bg-card rounded-2xl border border-border/50 overflow-hidden hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all duration-300"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div className="relative flex items-start gap-4">
-                        <img
-                          src={doctor.avatar || "/placeholder.svg"}
-                          alt={doctor.name}
-                          className="w-16 h-16 rounded-xl object-cover"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">{doctor.name}</h3>
-                          <p className="text-sm text-primary font-medium">{doctor.specialty}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{doctor.hospital}</p>
-                          <div className="flex items-center gap-4 mt-3">
-                            <span className="text-xs text-muted-foreground">Last visit: {doctor.lastVisit}</span>
+                      <div className="relative">
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={doctor.avatar || "/placeholder.svg"}
+                            alt={doctor.name}
+                            className="w-16 h-16 rounded-xl object-cover"
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground">{doctor.name}</h3>
+                            <p className="text-sm text-primary font-medium">{doctor.specialty}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{doctor.hospital}</p>
+                            <div className="flex items-center gap-4 mt-3">
+                              <span className="text-xs text-muted-foreground">Last visit: {doctor.lastVisit}</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => setSelectedDoctor(selectedDoctor === doctor.id ? null : doctor.id)}
+                            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                          >
+                            <ChevronRight className={cn("w-5 h-5 text-muted-foreground transition-transform duration-300", selectedDoctor === doctor.id && "rotate-90")} />
+                          </button>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+
+                        {/* Expandable Actions */}
+                        <AnimatePresence>
+                          {selectedDoctor === doctor.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-4 pt-4 border-t border-border/50 space-y-2"
+                            >
+                              <button
+                                onClick={() => window.location.href = "/dashboard/messages"}
+                                className="w-full p-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 text-primary font-medium"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                                Send Message
+                              </button>
+                              <button
+                                onClick={() => window.location.href = "/dashboard/appointments"}
+                                className="w-full p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2 font-medium"
+                              >
+                                <Calendar className="w-4 h-4" />
+                                Book Appointment
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </motion.div>
                   ))}

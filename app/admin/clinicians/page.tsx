@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { UserCheck, Star, Plus, Eye, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { Input } from "@/components/ui/input"
 
 const mockClinicians = [
@@ -45,9 +46,7 @@ export default function AdminCliniciansPage() {
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Clinician
                             </Button>
-                            <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
-                                <Bell className="w-5 h-5 text-muted-foreground" />
-                            </button>
+                            <NotificationsDropdown />
                             <div className="hidden md:block">
                                 <ThemeToggle />
                             </div>

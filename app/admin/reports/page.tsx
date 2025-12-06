@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { FileText, Download, Plus, Eye, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 export default function AdminReportsPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -33,9 +34,7 @@ export default function AdminReportsPage() {
                                 <Plus className="w-4 h-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Create Report</span>
                             </Button>
-                            <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
-                                <Bell className="w-5 h-5 text-muted-foreground" />
-                            </button>
+                            <NotificationsDropdown />
                             <div className="hidden md:block">
                                 <ThemeToggle />
                             </div>

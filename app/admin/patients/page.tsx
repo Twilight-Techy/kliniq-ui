@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { Users, TrendingUp, Activity, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 const mockPatients = [
     { id: "1", name: "Adebayo Okafor", age: 34, condition: "Hypertension", lastVisit: "2 days ago", status: "stable" },
@@ -40,9 +41,7 @@ export default function AdminPatientsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
-                                <Bell className="w-5 h-5 text-muted-foreground" />
-                            </button>
+                            <NotificationsDropdown />
                             <div className="hidden md:block">
                                 <ThemeToggle />
                             </div>

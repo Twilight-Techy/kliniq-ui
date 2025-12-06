@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import {
@@ -278,11 +279,7 @@ export default function AdminDashboard() {
                 <div className="hidden md:block">
                   <ThemeToggle />
                 </div>
-
-                <button className="relative p-2.5 rounded-xl hover:bg-secondary transition-colors">
-                  <Bell className="w-5 h-5 text-muted-foreground" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
-                </button>
+                <NotificationsDropdown />
 
                 {/* Admin Avatar */}
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20">

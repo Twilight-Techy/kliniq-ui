@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { PatientSidebar } from "@/components/patient-sidebar"
 import {
@@ -139,7 +140,6 @@ export default function MessagesPage() {
     const [showMobileChat, setShowMobileChat] = useState(false)
     const [showVoiceCall, setShowVoiceCall] = useState(false)
     const [showVideoCall, setShowVideoCall] = useState(false)
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
     const [isRecording, setIsRecording] = useState(false)
     const [callMinimized, setCallMinimized] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -196,10 +196,7 @@ export default function MessagesPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
-                                <Bell className="w-5 h-5 text-muted-foreground" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-                            </button>
+                            <NotificationsDropdown />
                             <div className="hidden md:block">
                                 <ThemeToggle />
                             </div>
@@ -446,43 +443,19 @@ export default function MessagesPage() {
                                     >
                                         {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5 text-muted-foreground" />}
                                     </button>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-                                        >
-                                            <Smile className="w-5 h-5 text-muted-foreground" />
-                                        </button>
-
-                                        {/* Emoji Picker */}
-                                        {showEmojiPicker && (
-                                            <div className="absolute bottom-12 right-0 w-80 bg-card border border-border/50 rounded-2xl shadow-xl p-4 z-50">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <h4 className="font-semibold text-sm">Emojis</h4>
-                                                    <button
-                                                        onClick={() => setShowEmojiPicker(false)}
-                                                        className="p-1 rounded-lg hover:bg-secondary"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                                <div className="grid grid-cols-8 gap-2 max-h-64 overflow-y-auto">
-                                                    {["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "☺️", "😚", "😙", "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "💪", "👍", "👎", "👏", "🙌", "👋", "🤝", "❤️", "💙", "💚", "💛", "🧡", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "✨", "⭐", "🌟", "💫", "🔥", "💯", "✅", "❌", "🎉", "🎊", "🎈"].map((emoji) => (
-                                                        <button
-                                                            key={emoji}
-                                                            onClick={() => {
-                                                                setMessageInput(prev => prev + emoji)
-                                                                setShowEmojiPicker(false)
-                                                            }}
-                                                            className="p-2 text-2xl hover:bg-secondary rounded-lg transition-colors"
-                                                        >
-                                                            {emoji}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            // Focus the input to allow system emoji picker
+                                            const input = document.querySelector('input[placeholder="Type a message..."]') as HTMLInputElement
+                                            if (input) {
+                                                input.focus()
+                                            }
+                                        }}
+                                        className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                                        title="Use your system emoji picker (Win + . or Win + ; on Windows, Cmd + Ctrl + Space on Mac)"
+                                    >
+                                        <Smile className="w-5 h-5 text-muted-foreground" />
+                                    </button>
                                     <div className="flex-1">
                                         <Input
                                             value={messageInput}

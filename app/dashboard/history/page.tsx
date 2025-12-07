@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -92,6 +92,7 @@ export default function HistoryPage() {
     const [mounted, setMounted] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [filter, setFilter] = useState<"all" | "consultation" | "prescription" | "test" | "diagnosis">("all")
+    const [selectedItem, setSelectedItem] = useState<string | null>(null)
 
     useEffect(() => {
         setMounted(true)
@@ -192,10 +193,80 @@ export default function HistoryPage() {
                                                 </div>
                                             </div>
                                             <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                                            <button className="flex items-center gap-1 text-sm text-primary hover:underline">
-                                                View Details
+                                            <button
+                                                onClick={() => setSelectedItem(selectedItem === item.id ? null : item.id)}
+                                                className="flex items-center gap-1 text-sm text-primary hover:underline"
+                                            >
+                                                {selectedItem === item.id ? "Hide Details" : "View Details"}
                                                 <ChevronRight className="w-4 h-4" />
                                             </button>
+
+                                            {/* Expandable Details */}
+                                            <AnimatePresence>
+                                                {selectedItem === item.id && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: "auto" }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="mt-4 pt-4 border-t border-border/50 space-y-3"
+                                                    >
+                                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                                            <div>
+                                                                <p className="text-muted-foreground mb-1">Type</p>
+                                                                <p className="font-medium capitalize">{item.type}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-muted-foreground mb-1">Date</p>
+                                                                <p className="font-medium">{item.date}</p>
+                                                            </div>
+                                                            <div className="col-span-2">
+                                                                <p className="text-muted-foreground mb-1">Doctor</p>
+                                                                <p className="font-medium">{item.doctor}</p>
+                                                            </div>
+                                                            <div className="col-span-2">
+                                                                <p className="text-muted-foreground mb-1">Full Description</p>
+                                                                <p className="font-medium">{item.description}</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            onClick={() => {
+                                                                // Create a detailed report
+                                                                const reportContent = `
+MEDICAL HISTORY RECORD
+======================
+
+Record Type: ${item.type.toUpperCase()}
+Title: ${item.title}
+Doctor: ${item.doctor}
+Date: ${item.date}
+${item.status ? `Status: ${item.status}` : ''}
+
+Description:
+${item.description}
+
+Record ID: ${item.id}
+Generated: ${new Date().toLocaleString()}
+                                                                `.trim()
+
+                                                                const blob = new Blob([reportContent], { type: 'text/plain' })
+                                                                const url = window.URL.createObjectURL(blob)
+                                                                const link = document.createElement('a')
+                                                                link.href = url
+                                                                link.download = `medical-record-${item.type}-${item.date.replace(/\s/g, '-')}.txt`
+                                                                document.body.appendChild(link)
+                                                                link.click()
+                                                                document.body.removeChild(link)
+                                                                window.URL.revokeObjectURL(url)
+                                                            }}
+                                                            className="w-full rounded-xl"
+                                                            variant="outline"
+                                                        >
+                                                            <Download className="w-4 h-4 mr-2" />
+                                                            Download Record
+                                                        </Button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                     </div>
                                 </motion.div>

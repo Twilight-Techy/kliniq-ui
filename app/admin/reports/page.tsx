@@ -7,10 +7,12 @@ import { AdminSidebar } from "@/components/admin-sidebar"
 import { FileText, Download, Plus, Eye, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminReportsPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const { toast } = useToast()
     useEffect(() => setMounted(true), [])
     if (!mounted) return null
 
@@ -30,7 +32,10 @@ export default function AdminReportsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button className="rounded-xl bg-primary">
+                            <Button
+                                className="rounded-xl bg-primary"
+                                onClick={() => toast({ title: "Create Report", description: "Report creation wizard would open here" })}
+                            >
                                 <Plus className="w-4 h-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Create Report</span>
                             </Button>
@@ -64,10 +69,19 @@ export default function AdminReportsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2 mt-4">
-                                        <Button size="sm" variant="outline" className="flex-1 rounded-xl bg-transparent">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1 rounded-xl bg-transparent"
+                                            onClick={() => toast({ title: "Viewing Report", description: `Opening ${report.title}...` })}
+                                        >
                                             <Eye className="w-4 h-4 mr-2" />View
                                         </Button>
-                                        <Button size="sm" className="flex-1 rounded-xl bg-primary">
+                                        <Button
+                                            size="sm"
+                                            className="flex-1 rounded-xl bg-primary"
+                                            onClick={() => toast({ title: "Downloading", description: `${report.title} downloading...` })}
+                                        >
                                             <Download className="w-4 h-4 mr-2" />Download
                                         </Button>
                                     </div>

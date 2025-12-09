@@ -7,10 +7,12 @@ import { AdminSidebar } from "@/components/admin-sidebar"
 import { CreditCard, Download, DollarSign, TrendingUp, CheckCircle2, Clock, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminBillingPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const { toast } = useToast()
     useEffect(() => setMounted(true), [])
     if (!mounted) return null
 
@@ -63,7 +65,13 @@ export default function AdminBillingPage() {
                         <div className="p-6 rounded-3xl bg-card border border-border/50">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-lg font-semibold text-foreground">Recent Invoices</h2>
-                                <Button variant="outline" className="rounded-xl bg-transparent"><Download className="w-4 h-4 mr-2" />Export</Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl bg-transparent"
+                                    onClick={() => toast({ title: "Exporting", description: "Invoice data exporting to CSV..." })}
+                                >
+                                    <Download className="w-4 h-4 mr-2" />Export
+                                </Button>
                             </div>
                             <div className="space-y-3">
                                 {[

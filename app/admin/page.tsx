@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { AdminSidebar } from "@/components/admin-sidebar"
+import { useToast } from "@/hooks/use-toast"
 import {
   Building2,
   Users,
@@ -217,6 +219,42 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterRole, setFilterRole] = useState<"all" | "doctor" | "nurse">("all")
   const [selectedPeriod, setSelectedPeriod] = useState("This Month")
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [activityFilter, setActivityFilter] = useState<"all" | "verification" | "message" | "alert" | "ai">("all")
+  const [showActivityFilterDropdown, setShowActivityFilterDropdown] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const periodOptions = ["Today", "This Week", "This Month", "This Quarter", "This Year"]
+  const activityTypes = [
+    { value: "all", label: "All Activities" },
+    { value: "verification", label: "Verifications" },
+    { value: "message", label: "Messages" },
+    { value: "alert", label: "Alerts" },
+    { value: "ai", label: "AI Generated" },
+  ]
+
+  const handleDownloadReport = () => {
+    // Create CSV content
+    const csvContent = [
+      ["Day", "Consultations"],
+      ...weeklyData.map(d => [d.label, d.value.toString()])
+    ].map(row => row.join(",")).join("\n")
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `weekly_consultations_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast({ title: "Downloaded!", description: "Weekly consultations report saved as CSV" })
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -270,11 +308,34 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Period Selector */}
-                <button className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors text-sm font-medium">
-                  <Calendar className="w-4 h-4" />
-                  {selectedPeriod}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
+                <div className="relative hidden sm:block">
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors text-sm font-medium"
+                    onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    {selectedPeriod}
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  {showPeriodDropdown && (
+                    <div className="absolute top-full right-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-lg z-50 py-1">
+                      {periodOptions.map((period) => (
+                        <button
+                          key={period}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${selectedPeriod === period ? "text-primary font-medium" : "text-foreground"
+                            }`}
+                          onClick={() => {
+                            setSelectedPeriod(period)
+                            setShowPeriodDropdown(false)
+                            toast({ title: "Period Changed", description: `Now showing data for ${period}` })
+                          }}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div className="hidden md:block">
                   <ThemeToggle />
@@ -346,34 +407,95 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground">Patient visits this week</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+                    <button
+                      className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                      onClick={() => toast({ title: "Refreshing", description: "Chart data refreshed successfully" })}
+                    >
                       <RefreshCw className="w-4 h-4 text-muted-foreground" />
                     </button>
-                    <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+                    <button
+                      className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                      onClick={handleDownloadReport}
+                    >
                       <Download className="w-4 h-4 text-muted-foreground" />
                     </button>
                   </div>
                 </div>
 
-                {/* Bar Chart */}
-                <div className="flex items-end justify-between gap-3 h-48">
-                  {weeklyData.map((day, index) => (
-                    <div key={day.label} className="flex-1 flex flex-col items-center gap-2">
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${day.value}%` }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                        className={cn(
-                          "w-full rounded-t-xl transition-all duration-300 hover:opacity-80 cursor-pointer relative group",
-                          day.color,
-                        )}
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg bg-foreground text-background text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {day.value} visits
-                        </div>
-                      </motion.div>
-                      <span className="text-xs text-muted-foreground">{day.label}</span>
-                    </div>
+                {/* Line Chart */}
+                <div className="relative h-48">
+                  {/* Grid lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between">
+                    {[100, 75, 50, 25, 0].map((line) => (
+                      <div key={line} className="border-t border-border/30 relative">
+                        <span className="absolute -left-8 -top-2 text-xs text-muted-foreground">{line}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* SVG Line Chart */}
+                  <svg className="w-full h-full relative z-10" viewBox="0 0 700 200" preserveAspectRatio="none">
+                    {/* Gradient fill under line */}
+                    <defs>
+                      <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Area fill */}
+                    <motion.path
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 1 }}
+                      d={`M 50 ${200 - weeklyData[0].value * 2} ${weeklyData.map((d, i) => `L ${50 + i * 100} ${200 - d.value * 2}`).join(' ')} L ${50 + (weeklyData.length - 1) * 100} 200 L 50 200 Z`}
+                      fill="url(#lineGradient)"
+                    />
+
+                    {/* Line */}
+                    <motion.path
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1.5, ease: "easeInOut" }}
+                      d={`M 50 ${200 - weeklyData[0].value * 2} ${weeklyData.map((d, i) => `L ${50 + i * 100} ${200 - d.value * 2}`).join(' ')}`}
+                      fill="none"
+                      stroke="#8B5CF6"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+
+                    {/* Data points */}
+                    {weeklyData.map((day, index) => (
+                      <motion.g key={day.label}>
+                        <motion.circle
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.5 + index * 0.1 }}
+                          cx={50 + index * 100}
+                          cy={200 - day.value * 2}
+                          r="6"
+                          fill="#8B5CF6"
+                          className="cursor-pointer hover:r-8 transition-all"
+                        />
+                        <motion.circle
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.5 + index * 0.1 }}
+                          cx={50 + index * 100}
+                          cy={200 - day.value * 2}
+                          r="3"
+                          fill="hsl(var(--background))"
+                        />
+                      </motion.g>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* X-axis labels */}
+                <div className="flex justify-between mt-2 px-4">
+                  {weeklyData.map((day) => (
+                    <span key={day.label} className="text-xs text-muted-foreground">{day.label}</span>
                   ))}
                 </div>
               </motion.div>
@@ -390,7 +512,10 @@ export default function AdminDashboard() {
                     <h2 className="text-lg font-semibold text-foreground">Department Distribution</h2>
                     <p className="text-sm text-muted-foreground">Consultations by specialty</p>
                   </div>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/50 hover:bg-secondary text-sm">
+                  <button
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/50 hover:bg-secondary text-sm"
+                    onClick={() => router.push('/admin/analytics')}
+                  >
                     <PieChart className="w-4 h-4" />
                     View Details
                   </button>
@@ -455,7 +580,10 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0 rounded-xl">
+                  <Button
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-0 rounded-xl"
+                    onClick={() => setShowUpgradeModal(true)}
+                  >
                     Upgrade Plan
                   </Button>
                 </div>
@@ -470,7 +598,10 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-foreground">Clinicians</h2>
-                  <button className="p-2 rounded-xl hover:bg-secondary transition-colors">
+                  <button
+                    className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                    onClick={() => router.push('/admin/clinicians')}
+                  >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
@@ -544,7 +675,11 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                <Button variant="outline" className="w-full mt-4 rounded-xl bg-transparent">
+                <Button
+                  variant="outline"
+                  className="w-full mt-4 rounded-xl bg-transparent"
+                  onClick={() => router.push('/admin/clinicians')}
+                >
                   View All Clinicians
                   <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
@@ -564,10 +699,35 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
                 <p className="text-sm text-muted-foreground">Latest actions across the platform</p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/50 hover:bg-secondary text-sm">
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/50 hover:bg-secondary text-sm"
+                  onClick={() => setShowActivityFilterDropdown(!showActivityFilterDropdown)}
+                >
+                  <Filter className="w-4 h-4" />
+                  {activityTypes.find(t => t.value === activityFilter)?.label || "Filter"}
+                </button>
+                {showActivityFilterDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-44 bg-card border border-border rounded-xl shadow-lg z-50 py-1">
+                    {activityTypes.map((type) => (
+                      <button
+                        type="button"
+                        key={type.value}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${activityFilter === type.value ? "text-primary font-medium" : "text-foreground"
+                          }`}
+                        onClick={() => {
+                          setActivityFilter(type.value as typeof activityFilter)
+                          setShowActivityFilterDropdown(false)
+                          toast({ title: "Filter Applied", description: `Showing ${type.label.toLowerCase()}` })
+                        }}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -578,6 +738,7 @@ export default function AdminDashboard() {
                   title: "Dr. Oluwaseun verified triage summary",
                   time: "2 minutes ago",
                   patient: "Adebayo Ogundimu",
+                  type: "verification",
                 },
                 {
                   icon: MessageSquare,
@@ -585,6 +746,7 @@ export default function AdminDashboard() {
                   title: "Nurse Fatima responded to patient query",
                   time: "15 minutes ago",
                   patient: "Chidinma Okafor",
+                  type: "message",
                 },
                 {
                   icon: AlertCircle,
@@ -592,6 +754,7 @@ export default function AdminDashboard() {
                   title: "High urgency case escalated to doctor",
                   time: "32 minutes ago",
                   patient: "Emmanuel Adewale",
+                  type: "alert",
                 },
                 {
                   icon: Zap,
@@ -599,26 +762,135 @@ export default function AdminDashboard() {
                   title: "AI generated triage summary",
                   time: "1 hour ago",
                   patient: "Fatima Ibrahim",
+                  type: "ai",
                 },
-              ].map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-colors"
-                >
-                  <div className={cn("p-2.5 rounded-xl", activity.color)}>
-                    <activity.icon className="w-4 h-4" />
+              ]
+                .filter(activity => activityFilter === "all" || activity.type === activityFilter)
+                .map((activity, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className={cn("p-2.5 rounded-xl", activity.color)}>
+                      <activity.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{activity.title}</p>
+                      <p className="text-sm text-muted-foreground">Patient: {activity.patient}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{activity.title}</p>
-                    <p className="text-sm text-muted-foreground">Patient: {activity.patient}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                </div>
-              ))}
+                ))}
             </div>
           </motion.div>
         </main>
       </div>
+
+      {/* Upgrade Plan Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-border"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Upgrade Your Plan</h2>
+                  <p className="text-sm text-muted-foreground">Choose the plan that fits your needs</p>
+                </div>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  {
+                    name: "Starter",
+                    price: "₦50,000",
+                    period: "/month",
+                    features: ["Up to 10 Clinicians", "5,000 API Calls", "2 GB Storage", "Email Support"],
+                    current: false,
+                  },
+                  {
+                    name: "Premium",
+                    price: "₦150,000",
+                    period: "/month",
+                    features: ["Up to 50 Clinicians", "20,000 API Calls", "10 GB Storage", "Priority Support", "Analytics Dashboard"],
+                    current: true,
+                  },
+                  {
+                    name: "Enterprise",
+                    price: "₦350,000",
+                    period: "/month",
+                    features: ["Unlimited Clinicians", "Unlimited API Calls", "50 GB Storage", "24/7 Support", "Custom Integrations", "Dedicated Account Manager"],
+                    current: false,
+                  },
+                ].map((plan) => (
+                  <div
+                    key={plan.name}
+                    className={cn(
+                      "p-5 rounded-2xl border-2 transition-all",
+                      plan.current
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    {plan.current && (
+                      <span className="inline-block px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground rounded-full mb-2">
+                        Current Plan
+                      </span>
+                    )}
+                    <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
+                    <div className="flex items-baseline gap-1 mt-2 mb-4">
+                      <span className="text-2xl font-bold text-foreground">{plan.price}</span>
+                      <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    </div>
+                    <ul className="space-y-2 mb-4">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className={cn(
+                        "w-full rounded-xl",
+                        plan.current
+                          ? "bg-secondary text-muted-foreground"
+                          : "bg-primary"
+                      )}
+                      disabled={plan.current}
+                      onClick={() => {
+                        if (!plan.current) {
+                          toast({ title: "Upgrade Requested", description: `Request to upgrade to ${plan.name} plan submitted` })
+                          setShowUpgradeModal(false)
+                        }
+                      }}
+                    >
+                      {plan.current ? "Current" : "Upgrade"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -7,10 +7,12 @@ import { AdminSidebar } from "@/components/admin-sidebar"
 import { BarChart3, TrendingUp, PieChart, Download, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminAnalyticsPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
+    const { toast } = useToast()
     useEffect(() => setMounted(true), [])
     if (!mounted) return null
 
@@ -30,7 +32,11 @@ export default function AdminAnalyticsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button variant="outline" className="rounded-xl bg-transparent">
+                            <Button
+                                variant="outline"
+                                className="rounded-xl bg-transparent"
+                                onClick={() => toast({ title: "Exporting Analytics", description: "Analytics report exporting to PDF..." })}
+                            >
                                 <Download className="w-4 h-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Export</span>
                             </Button>

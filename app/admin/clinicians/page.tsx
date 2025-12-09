@@ -9,6 +9,7 @@ import { UserCheck, Star, Plus, Eye, Bell, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
 
 const mockClinicians = [
     { id: "1", name: "Dr. Oluwaseun Adeyemi", role: "Doctor", specialty: "Gen Med", patients: 156, points: 2450, rating: 4.9, status: "active" },
@@ -20,6 +21,7 @@ const mockClinicians = [
 export default function AdminCliniciansPage() {
     const [mounted, setMounted] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const { toast } = useToast()
 
     useEffect(() => setMounted(true), [])
 
@@ -42,7 +44,10 @@ export default function AdminCliniciansPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button className="rounded-xl bg-primary hidden sm:flex">
+                            <Button
+                                className="rounded-xl bg-primary hidden sm:flex"
+                                onClick={() => toast({ title: "Add Clinician", description: "Clinician registration form would open here" })}
+                            >
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Clinician
                             </Button>
@@ -106,7 +111,12 @@ export default function AdminCliniciansPage() {
                                                 <span className="text-sm font-medium">{c.rating}</span>
                                             </div>
                                             <span className={cn("w-2 h-2 rounded-full", c.status === "active" ? "bg-green-500" : "bg-amber-500")} />
-                                            <Button size="sm" variant="ghost" className="rounded-xl">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="rounded-xl"
+                                                onClick={() => toast({ title: `Viewing ${c.name}`, description: `${c.role} profile with ${c.patients} patients` })}
+                                            >
                                                 <Eye className="w-4 h-4" />
                                             </Button>
                                         </div>

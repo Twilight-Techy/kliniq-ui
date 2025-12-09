@@ -111,7 +111,7 @@ export default function AppointmentsPage() {
         return matchesFilter && matchesSearch
     })
 
-    const handleBookAppointment = () => {
+    const handleRequestAppointment = () => {
         setShowBookModal(true)
     }
 
@@ -210,9 +210,9 @@ Report generated on: ${new Date().toLocaleDateString()}
                             </div>
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <Button onClick={handleBookAppointment} className="bg-gradient-to-r from-primary to-primary/80 sm:px-4">
+                            <Button onClick={handleRequestAppointment} className="bg-gradient-to-r from-primary to-primary/80 sm:px-4">
                                 <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline ml-2">Book Appointment</span>
+                                <span className="hidden sm:inline ml-2">Request Appointment</span>
                             </Button>
                             <NotificationsDropdown />
                             <div className="hidden md:block">
@@ -429,18 +429,18 @@ Report generated on: ${new Date().toLocaleDateString()}
                             <CalendarIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-foreground mb-2">No appointments found</h3>
                             <p className="text-sm text-muted-foreground mb-6">
-                                {filter === "all" ? "You haven't booked any appointments yet" : `No ${filter} appointments`}
+                                {filter === "all" ? "You haven't requested any appointments yet" : `No ${filter} appointments`}
                             </p>
                             <Button className="bg-gradient-to-r from-primary to-primary/80">
                                 <Plus className="w-4 h-4 mr-2" />
-                                Book Your First Appointment
+                                Request Your First Appointment
                             </Button>
                         </div>
                     )}
                 </div>
             </main>
 
-            {/* Book Appointment Modal */}
+            {/* Request Appointment Modal */}
             <AnimatePresence>
                 {showBookModal && (
                     <motion.div
@@ -455,35 +455,56 @@ Report generated on: ${new Date().toLocaleDateString()}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-card rounded-3xl max-w-md w-full p-6 shadow-xl"
+                            className="bg-card rounded-3xl max-w-md w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto"
                         >
-                            <h3 className="text-2xl font-bold text-foreground mb-2">Book New Appointment</h3>
-                            <p className="text-muted-foreground mb-6">Schedule an appointment with your healthcare provider</p>
+                            <h3 className="text-2xl font-bold text-foreground mb-2">Request Appointment</h3>
+                            <p className="text-muted-foreground mb-6">Submit a request and we'll match you with an available doctor</p>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-sm font-medium text-foreground mb-2 block">Select Doctor</label>
+                                    <label className="text-sm font-medium text-foreground mb-2 block">Select Hospital</label>
                                     <select className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground">
-                                        <option>Dr. Oluwaseun Adeyemi - General Medicine</option>
-                                        <option>Dr. Amara Obi - Cardiology</option>
-                                        <option>Dr. Chidinma Nwosu - Dermatology</option>
+                                        <option>Lagos University Teaching Hospital</option>
+                                        <option>National Hospital Abuja</option>
+                                        <option>Reddington Hospital</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-foreground mb-2 block">Appointment Type</label>
+                                    <label className="text-sm font-medium text-foreground mb-2 block">Department / Specialty Needed</label>
+                                    <select className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground">
+                                        <option>General Medicine</option>
+                                        <option>Cardiology</option>
+                                        <option>Dermatology</option>
+                                        <option>Pediatrics</option>
+                                        <option>Orthopedics</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-foreground mb-2 block">Reason for Visit</label>
+                                    <textarea
+                                        className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground resize-none h-24"
+                                        placeholder="Briefly describe your symptoms or reason for the appointment..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-foreground mb-2 block">Preferred Appointment Type</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button className="px-4 py-3 rounded-xl border-2 border-primary bg-primary/10 text-primary font-medium">Video Call</button>
-                                        <button className="px-4 py-3 rounded-xl border border-border hover:bg-secondary text-foreground">In-Person</button>
+                                        <button type="button" className="px-4 py-3 rounded-xl border-2 border-primary bg-primary/10 text-primary font-medium">Video Call</button>
+                                        <button type="button" className="px-4 py-3 rounded-xl border border-border hover:bg-secondary text-foreground">In-Person</button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-2 block">Date</label>
-                                        <Input type="date" className="rounded-xl" />
+                                <div>
+                                    <label className="text-sm font-medium text-foreground mb-2 block">Urgency Level</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button type="button" className="px-3 py-2 rounded-xl border border-border hover:bg-secondary text-foreground text-sm">Low</button>
+                                        <button type="button" className="px-3 py-2 rounded-xl border-2 border-primary bg-primary/10 text-primary font-medium text-sm">Normal</button>
+                                        <button type="button" className="px-3 py-2 rounded-xl border border-border hover:bg-secondary text-foreground text-sm">Urgent</button>
                                     </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-2 block">Time</label>
-                                        <Input type="time" className="rounded-xl" />
-                                    </div>
+                                </div>
+                                <div className="p-4 rounded-xl bg-secondary/30 border border-border/50">
+                                    <p className="text-xs text-muted-foreground">
+                                        <strong>Note:</strong> After submitting your request, the hospital will review it and assign an available doctor. You'll receive a notification once your appointment is confirmed.
+                                    </p>
                                 </div>
                                 <div className="flex gap-3 mt-6">
                                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowBookModal(false)}>Cancel</Button>
@@ -492,12 +513,12 @@ Report generated on: ${new Date().toLocaleDateString()}
                                         onClick={() => {
                                             setShowBookModal(false)
                                             toast({
-                                                title: "Appointment Booked!",
-                                                description: "Your appointment has been scheduled successfully.",
+                                                title: "Request Submitted!",
+                                                description: "Your appointment request has been sent. You'll be notified once it's confirmed.",
                                             })
                                         }}
                                     >
-                                        Book Appointment
+                                        Submit Request
                                     </Button>
                                 </div>
                             </div>

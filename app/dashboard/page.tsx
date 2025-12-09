@@ -54,13 +54,15 @@ interface Appointment {
   status: "upcoming" | "completed" | "cancelled"
 }
 
-interface LinkedDoctor {
+interface LinkedHospital {
   id: string
   name: string
-  specialty: string
-  hospital: string
-  avatar: string
-  lastVisit: string
+  location: string
+  type: string
+  departments: string[]
+  linkedSince: string
+  totalVisits: number
+  rating: number
 }
 
 const mockAppointments: Appointment[] = [
@@ -84,28 +86,42 @@ const mockAppointments: Appointment[] = [
   },
 ]
 
-const mockDoctors: LinkedDoctor[] = [
+const mockHospitals: LinkedHospital[] = [
   {
     id: "1",
-    name: "Dr. Oluwaseun Adeyemi",
-    specialty: "General Medicine",
-    hospital: "Lagos University Teaching Hospital",
-    avatar: "/placeholder.svg?height=80&width=80",
-    lastVisit: "Nov 28, 2025",
+    name: "Lagos University Teaching Hospital",
+    location: "Idi-Araba, Lagos",
+    type: "Teaching Hospital",
+    departments: ["General Medicine", "Cardiology", "Pediatrics", "Surgery"],
+    linkedSince: "Jan 15, 2025",
+    totalVisits: 12,
+    rating: 4.8,
   },
   {
     id: "2",
-    name: "Dr. Amara Obi",
-    specialty: "Cardiology",
-    hospital: "National Hospital Abuja",
-    avatar: "/placeholder.svg?height=80&width=80",
-    lastVisit: "Nov 15, 2025",
+    name: "National Hospital Abuja",
+    location: "Central Business District, Abuja",
+    type: "Federal Hospital",
+    departments: ["Cardiology", "Neurology", "Orthopedics"],
+    linkedSince: "Mar 20, 2025",
+    totalVisits: 5,
+    rating: 4.6,
+  },
+  {
+    id: "3",
+    name: "Reddington Hospital",
+    location: "Victoria Island, Lagos",
+    type: "Private Hospital",
+    departments: ["General Medicine", "Dermatology", "ENT"],
+    linkedSince: "Aug 10, 2025",
+    totalVisits: 3,
+    rating: 4.9,
   },
 ]
 
 const quickActions = [
   { icon: MessageSquare, label: "New Triage", color: "from-primary to-primary/80" },
-  { icon: Calendar, label: "Book Appointment", color: "from-accent to-accent/80" },
+  { icon: Calendar, label: "Request Appointment", color: "from-accent to-accent/80" },
   { icon: FileText, label: "Medical Records", color: "from-kliniq-cyan to-kliniq-cyan/80" },
   { icon: Phone, label: "Emergency", color: "from-destructive to-destructive/80" },
 ]
@@ -113,7 +129,7 @@ const quickActions = [
 export default function PatientDashboard() {
   const [mounted, setMounted] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"chat" | "appointments" | "doctors">("chat")
+  const [activeTab, setActiveTab] = useState<"chat" | "appointments" | "hospitals">("chat")
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -129,7 +145,7 @@ export default function PatientDashboard() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showEmergency, setShowEmergency] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null)
-  const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
+  const [selectedHospital, setSelectedHospital] = useState<string | null>(null)
   const [showTranscript, setShowTranscript] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -405,7 +421,7 @@ export default function PatientDashboard() {
                     setActiveTab("chat")
                   } else if (action.label === "Medical Records") {
                     window.location.href = "/dashboard/history"
-                  } else if (action.label === "Book Appointment") {
+                  } else if (action.label === "Request Appointment") {
                     window.location.href = "/dashboard/appointments"
                   } else if (action.label === "Emergency") {
                     setShowEmergency(true)
@@ -432,7 +448,7 @@ export default function PatientDashboard() {
             {[
               { id: "chat", label: "AI Assistant", icon: Bot },
               { id: "appointments", label: "Appointments", icon: Calendar },
-              { id: "doctors", label: "My Doctors", icon: Stethoscope },
+              { id: "hospitals", label: "My Hospitals", icon: Stethoscope },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -594,6 +610,47 @@ export default function PatientDashboard() {
 
                 {/* Health Summary Sidebar */}
                 <div className="space-y-6">
+                  {/* Consultation Recordings Widget */}
+                  <div className="p-5 bg-card rounded-2xl border border-border/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <Mic className="w-4 h-4 text-primary" />
+                        Recordings
+                      </h3>
+                      <Link
+                        href="/dashboard/consultations"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View All
+                      </Link>
+                    </div>
+                    <button
+                      onClick={() => window.location.href = "/dashboard/consultations"}
+                      className="w-full p-4 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 hover:from-primary/20 hover:to-accent/20 transition-all mb-4 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Mic className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-medium text-foreground">Start Recording</p>
+                          <p className="text-xs text-muted-foreground">Record your consultation</p>
+                        </div>
+                      </div>
+                    </button>
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Recent Recordings</p>
+                      <div className="p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors" onClick={() => window.location.href = "/dashboard/consultations"}>
+                        <p className="text-sm font-medium text-foreground truncate">General Checkup</p>
+                        <p className="text-xs text-muted-foreground">Dec 5 • 15:32</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors" onClick={() => window.location.href = "/dashboard/consultations"}>
+                        <p className="text-sm font-medium text-foreground truncate">Cardiac Follow-up</p>
+                        <p className="text-xs text-muted-foreground">Nov 28 • 22:45</p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Recent Notes */}
                   <div className="p-5 bg-card rounded-2xl border border-border/50">
                     <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -654,7 +711,7 @@ export default function PatientDashboard() {
                     className="bg-gradient-to-r from-primary to-primary/80"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Book New
+                    Request New
                   </Button>
                 </div>
 
@@ -765,30 +822,30 @@ export default function PatientDashboard() {
               </motion.div>
             )}
 
-            {activeTab === "doctors" && (
+            {activeTab === "hospitals" && (
               <motion.div
-                key="doctors"
+                key="hospitals"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">My Linked Doctors</h2>
+                  <h2 className="text-xl font-semibold text-foreground">My Linked Hospitals</h2>
                   <Button
                     onClick={() => window.location.href = "/dashboard/appointments"}
                     variant="outline"
                     className="rounded-xl bg-transparent"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Link New Doctor
+                    Link New Hospital
                   </Button>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  {mockDoctors.map((doctor, index) => (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mockHospitals.map((hospital, index) => (
                     <motion.div
-                      key={doctor.id}
+                      key={hospital.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
@@ -796,31 +853,52 @@ export default function PatientDashboard() {
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative">
-                        <div className="flex items-start gap-4">
-                          <img
-                            src={doctor.avatar || "/placeholder.svg"}
-                            alt={doctor.name}
-                            className="w-16 h-16 rounded-xl object-cover"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-foreground">{doctor.name}</h3>
-                            <p className="text-sm text-primary font-medium">{doctor.specialty}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{doctor.hospital}</p>
-                            <div className="flex items-center gap-4 mt-3">
-                              <span className="text-xs text-muted-foreground">Last visit: {doctor.lastVisit}</span>
-                            </div>
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
+                            <Stethoscope className="w-7 h-7 text-primary" />
                           </div>
-                          <button
-                            onClick={() => setSelectedDoctor(selectedDoctor === doctor.id ? null : doctor.id)}
-                            className="p-2 rounded-xl hover:bg-secondary transition-colors"
-                          >
-                            <ChevronRight className={cn("w-5 h-5 text-muted-foreground transition-transform duration-300", selectedDoctor === doctor.id && "rotate-90")} />
-                          </button>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-foreground truncate">{hospital.name}</h3>
+                            <p className="text-sm text-muted-foreground">{hospital.location}</p>
+                            <p className="text-xs text-primary font-medium mt-1">{hospital.type}</p>
+                          </div>
                         </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex items-center gap-1 text-amber-500">
+                            <span className="text-sm font-bold">{hospital.rating}</span>
+                            <span className="text-xs">★</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">{hospital.totalVisits} visits</span>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">Since {hospital.linkedSince}</span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1 mb-4">
+                          {hospital.departments.slice(0, 3).map((dept) => (
+                            <span key={dept} className="px-2 py-1 rounded-lg bg-secondary/50 text-xs text-muted-foreground">
+                              {dept}
+                            </span>
+                          ))}
+                          {hospital.departments.length > 3 && (
+                            <span className="px-2 py-1 rounded-lg bg-secondary/50 text-xs text-muted-foreground">
+                              +{hospital.departments.length - 3} more
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedHospital(selectedHospital === hospital.id ? null : hospital.id)}
+                          className="w-full flex items-center justify-center gap-2 p-2 rounded-xl hover:bg-secondary transition-colors text-sm text-muted-foreground"
+                        >
+                          <span>{selectedHospital === hospital.id ? "Hide Actions" : "View Actions"}</span>
+                          <ChevronRight className={cn("w-4 h-4 transition-transform duration-300", selectedHospital === hospital.id && "rotate-90")} />
+                        </button>
 
                         {/* Expandable Actions */}
                         <AnimatePresence>
-                          {selectedDoctor === doctor.id && (
+                          {selectedHospital === hospital.id && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
@@ -828,18 +906,18 @@ export default function PatientDashboard() {
                               className="mt-4 pt-4 border-t border-border/50 space-y-2"
                             >
                               <button
-                                onClick={() => window.location.href = "/dashboard/messages"}
+                                onClick={() => window.location.href = "/dashboard/appointments"}
                                 className="w-full p-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 text-primary font-medium"
                               >
-                                <MessageSquare className="w-4 h-4" />
-                                Send Message
+                                <Calendar className="w-4 h-4" />
+                                Request Appointment
                               </button>
                               <button
-                                onClick={() => window.location.href = "/dashboard/appointments"}
+                                onClick={() => window.location.href = "/dashboard/messages"}
                                 className="w-full p-3 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2 font-medium"
                               >
-                                <Calendar className="w-4 h-4" />
-                                Book Appointment
+                                <MessageSquare className="w-4 h-4" />
+                                Contact Hospital
                               </button>
                             </motion.div>
                           )}

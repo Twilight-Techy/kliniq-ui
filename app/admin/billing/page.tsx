@@ -9,10 +9,38 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { useToast } from "@/hooks/use-toast"
 
+const invoices = [
+    { id: "INV-001", client: "Lagos General", amount: "₦125,000", amountRaw: 125000, status: "paid", date: "Dec 1, 2025" },
+    { id: "INV-002", client: "National Hospital", amount: "₦98,500", amountRaw: 98500, status: "pending", date: "Dec 3, 2025" },
+    { id: "INV-003", client: "City Clinic", amount: "₦45,000", amountRaw: 45000, status: "paid", date: "Dec 4, 2025" },
+    { id: "INV-004", client: "Eko Hospital", amount: "₦210,000", amountRaw: 210000, status: "paid", date: "Dec 5, 2025" },
+    { id: "INV-005", client: "Reddington Hospital", amount: "₦87,500", amountRaw: 87500, status: "pending", date: "Dec 6, 2025" },
+]
+
 export default function AdminBillingPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const { toast } = useToast()
+
+    const handleExport = () => {
+        const csvContent = [
+            ["Invoice ID", "Client", "Amount (NGN)", "Status", "Date"],
+            ...invoices.map(inv => [inv.id, inv.client, inv.amountRaw.toString(), inv.status, inv.date])
+        ].map(row => row.join(",")).join("\n")
+
+        const blob = new Blob([csvContent], { type: "text/csv" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `invoices_${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        toast({ title: "Downloaded!", description: "Invoice data saved as CSV" })
+    }
+
     useEffect(() => setMounted(true), [])
     if (!mounted) return null
 
@@ -68,17 +96,13 @@ export default function AdminBillingPage() {
                                 <Button
                                     variant="outline"
                                     className="rounded-xl bg-transparent"
-                                    onClick={() => toast({ title: "Exporting", description: "Invoice data exporting to CSV..." })}
+                                    onClick={handleExport}
                                 >
                                     <Download className="w-4 h-4 mr-2" />Export
                                 </Button>
                             </div>
                             <div className="space-y-3">
-                                {[
-                                    { id: "INV-001", client: "Lagos General", amount: "₦125,000", status: "paid", date: "Dec 1" },
-                                    { id: "INV-002", client: "National Hospital", amount: "₦98,500", status: "pending", date: "Dec 3" },
-                                    { id: "INV-003", client: "City Clinic", amount: "₦45,000", status: "paid", date: "Dec 4" }
-                                ].map((inv) => (
+                                {invoices.map((inv) => (
                                     <div key={inv.id} className="p-4 rounded-2xl bg-secondary/30 flex items-center justify-between">
                                         <div>
                                             <p className="font-medium text-foreground">{inv.id}</p>

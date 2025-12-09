@@ -1,10 +1,13 @@
+"use client"
+
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
-import { Home, Users, Calendar, Award, Settings, LogOut, Star, X, MessageSquare } from "lucide-react"
+import { Home, Users, Calendar, Award, Settings, LogOut, Star, X, MessageSquare, ClipboardList } from "lucide-react"
+import { useClinicianRole } from "@/contexts/clinician-role-context"
 
-const navItems = [
+const doctorNavItems = [
     { icon: Home, label: "Dashboard", href: "/clinician" },
     { icon: Users, label: "Patients", href: "/clinician/patients" },
     { icon: MessageSquare, label: "Messages", href: "/clinician/messages" },
@@ -13,10 +16,17 @@ const navItems = [
     { icon: Settings, label: "Settings", href: "/clinician/settings" },
 ]
 
+const nurseNavItems = [
+    { icon: Home, label: "Dashboard", href: "/clinician" },
+    { icon: Users, label: "Patients", href: "/clinician/patients" },
+    { icon: MessageSquare, label: "Messages", href: "/clinician/messages" },
+    { icon: ClipboardList, label: "Requests", href: "/clinician/requests" },
+    { icon: Award, label: "Points", href: "/clinician/points", badge: "New" },
+    { icon: Settings, label: "Settings", href: "/clinician/settings" },
+]
+
 interface ClinicianSidebarProps {
     activePath: string
-    role?: "nurse" | "doctor"
-    onRoleChange?: (role: "nurse" | "doctor") => void
     pointsData?: { current: number }
     sidebarOpen?: boolean
     onClose?: () => void
@@ -24,12 +34,12 @@ interface ClinicianSidebarProps {
 
 export function ClinicianSidebar({
     activePath,
-    role = "doctor",
-    onRoleChange,
     pointsData,
     sidebarOpen = false,
     onClose
 }: ClinicianSidebarProps) {
+    const { role, setRole, isLoading } = useClinicianRole()
+    const navItems = role === "nurse" ? nurseNavItems : doctorNavItems
     const patientBadge = role === "nurse" ? 12 : 7
 
     const SidebarContent = ({ layoutId }: { layoutId: string }) => (
@@ -46,31 +56,29 @@ export function ClinicianSidebar({
             </Link>
 
             {/* Role Switcher */}
-            {onRoleChange && (
-                <div className="relative p-1.5 bg-secondary/50 rounded-2xl mb-6">
-                    <div className="grid grid-cols-2 gap-1">
-                        {(["nurse", "doctor"] as const).map((r) => (
-                            <button
-                                key={r}
-                                onClick={() => onRoleChange(r)}
-                                className={cn(
-                                    "relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
-                                    role === r ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                                )}
-                            >
-                                {role === r && (
-                                    <motion.div
-                                        layoutId={layoutId}
-                                        className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 rounded-xl"
-                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                    />
-                                )}
-                                <span className="relative capitalize">{r}</span>
-                            </button>
-                        ))}
-                    </div>
+            <div className="relative p-1.5 bg-secondary/50 rounded-2xl mb-6">
+                <div className="grid grid-cols-2 gap-1">
+                    {(["nurse", "doctor"] as const).map((r) => (
+                        <button
+                            key={r}
+                            onClick={() => setRole(r)}
+                            className={cn(
+                                "relative px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
+                                role === r ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            {role === r && (
+                                <motion.div
+                                    layoutId={layoutId}
+                                    className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 rounded-xl"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <span className="relative capitalize">{r}</span>
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
 
             {/* Profile Card */}
             <div className="relative p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-card to-accent/5 border border-border/50 mb-8 overflow-hidden">
@@ -102,7 +110,8 @@ export function ClinicianSidebar({
             <nav className="flex-1 space-y-2">
                 {navItems.map((item) => {
                     const isActive = activePath === item.href
-                    const badge = item.href === "/clinician/patients" ? patientBadge : item.badge
+                    const badge = item.href === "/clinician/patients" ? patientBadge :
+                        item.href === "/clinician/requests" ? 5 : item.badge
 
                     return (
                         <Link
@@ -141,6 +150,18 @@ export function ClinicianSidebar({
             </div>
         </>
     )
+
+    if (isLoading) {
+        return (
+            <aside className="hidden lg:flex flex-col w-72 bg-card border-r border-border/50 p-6">
+                <div className="animate-pulse space-y-4">
+                    <div className="h-10 bg-secondary/50 rounded-xl" />
+                    <div className="h-12 bg-secondary/50 rounded-xl" />
+                    <div className="h-24 bg-secondary/50 rounded-xl" />
+                </div>
+            </aside>
+        )
+    }
 
     return (
         <>

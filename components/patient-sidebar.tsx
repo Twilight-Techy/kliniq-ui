@@ -2,12 +2,13 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
-import { Home, MessageSquare, Calendar, History, Settings, LogOut, X } from "lucide-react"
+import { Home, MessageSquare, Calendar, History, Settings, LogOut, X, Mic } from "lucide-react"
 
 const navItems = [
     { icon: Home, label: "Dashboard", href: "/dashboard" },
     { icon: MessageSquare, label: "Messages", href: "/dashboard/messages", badge: 3 },
     { icon: Calendar, label: "Appointments", href: "/dashboard/appointments" },
+    { icon: Mic, label: "Consultations", href: "/dashboard/consultations" },
     { icon: History, label: "History", href: "/dashboard/history" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ]

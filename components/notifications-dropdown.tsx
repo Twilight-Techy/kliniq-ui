@@ -39,12 +39,12 @@ export function NotificationsDropdown() {
                             <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-accent/5">
                                 <h3 className="font-semibold text-foreground">Notifications</h3>
                             </div>
-                            <div className="max-h-96 overflow-y-auto">
+                            <div className="max-h-80 overflow-y-auto">
                                 {notifications.map((notif, idx) => (
                                     <div
                                         key={idx}
                                         className={cn(
-                                            "p-4 border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer",
+                                            "p-4 border-b border-border/50 last:border-b-0 hover:bg-secondary/30 transition-colors cursor-pointer",
                                             notif.unread && "bg-primary/5"
                                         )}
                                     >
@@ -58,11 +58,6 @@ export function NotificationsDropdown() {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                            <div className="p-3 border-t border-border/50 bg-secondary/20">
-                                <button className="text-xs text-primary hover:underline w-full text-center">
-                                    View All Notifications
-                                </button>
                             </div>
                         </motion.div>
                     </>

@@ -11,6 +11,7 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { ClinicianSidebar } from "@/components/clinician-sidebar"
 import { useToast } from "@/hooks/use-toast"
+import { useClinicianRole } from "@/contexts/clinician-role-context"
 import {
     Calendar as CalendarIcon,
     Clock,
@@ -28,6 +29,8 @@ import {
     User,
     Edit,
     Trash,
+    AlertCircle,
+    ClipboardList,
 } from "lucide-react"
 
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -80,6 +83,7 @@ export default function SchedulePage() {
     const [patientSuggestions, setPatientSuggestions] = useState<string[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
     const { toast } = useToast()
+    const { role } = useClinicianRole()
 
     useEffect(() => {
         setMounted(true)
@@ -164,6 +168,27 @@ export default function SchedulePage() {
     }
 
     if (!mounted) return null
+
+    // Redirect nurses to requests page
+    if (role === "nurse") {
+        return (
+            <div className="min-h-screen bg-background flex">
+                <ClinicianSidebar activePath="/clinician/schedule" sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                <main className="flex-1 flex flex-col items-center justify-center p-6">
+                    <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-semibold text-foreground mb-2">Access Restricted</h2>
+                    <p className="text-muted-foreground text-center mb-4">
+                        The Schedule page is only available for doctors.<br />
+                        As a nurse, please use the Requests page to manage appointments.
+                    </p>
+                    <Button onClick={() => window.location.href = "/clinician/requests"} className="gap-2">
+                        <ClipboardList className="w-4 h-4" />
+                        Go to Requests
+                    </Button>
+                </main>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-background flex">

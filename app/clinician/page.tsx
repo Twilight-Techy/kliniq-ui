@@ -11,6 +11,7 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { ClinicianSidebar } from "@/components/clinician-sidebar"
 import { useToast } from "@/hooks/use-toast"
+import { useClinicianRole } from "@/contexts/clinician-role-context"
 import {
   Users,
   Clock,
@@ -190,12 +191,12 @@ const pointsData = {
 export default function ClinicianDashboard() {
   const [mounted, setMounted] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [role, setRole] = useState<UserRole>("nurse")
   const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "urgent">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [triageCases, setTriageCases] = useState(mockTriageCases)
   const [queries, setQueries] = useState(mockEscalatedQueries)
   const { toast } = useToast()
+  const { role } = useClinicianRole()
 
   useEffect(() => {
     setMounted(true)
@@ -244,7 +245,7 @@ export default function ClinicianDashboard() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <ClinicianSidebar activePath="/clinician" role={role} onRoleChange={setRole} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <ClinicianSidebar activePath="/clinician" sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen overflow-hidden">

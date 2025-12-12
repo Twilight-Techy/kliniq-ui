@@ -12,6 +12,7 @@ interface AuthContextType {
     login: (data: LoginRequest) => Promise<void>;
     signup: (data: SignupRequest) => Promise<void>;
     logout: () => void;
+    setAuthData: (token: string, user: User) => void;
     error: string | null;
     clearError: () => void;
 }
@@ -29,24 +30,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Load auth state from localStorage on mount
     useEffect(() => {
-        const storedToken = localStorage.getItem(TOKEN_KEY);
-        const storedUser = localStorage.getItem(USER_KEY);
+        const loadAuthState = () => {
+            const storedToken = localStorage.getItem(TOKEN_KEY);
+            const storedUser = localStorage.getItem(USER_KEY);
 
-        if (storedToken && storedUser) {
-            try {
-                setToken(storedToken);
-                setUser(JSON.parse(storedUser));
-            } catch {
-                // Invalid stored data, clear it
-                localStorage.removeItem(TOKEN_KEY);
-                localStorage.removeItem(USER_KEY);
+            if (storedToken && storedUser) {
+                try {
+                    setToken(storedToken);
+                    setUser(JSON.parse(storedUser));
+                } catch {
+                    // Invalid stored data, clear it
+                    localStorage.removeItem(TOKEN_KEY);
+                    localStorage.removeItem(USER_KEY);
+                }
             }
-        }
-        setIsLoading(false);
+            setIsLoading(false);
+        };
+
+        loadAuthState();
+
+        // Listen for storage changes (for cross-tab sync)
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === TOKEN_KEY || e.key === USER_KEY) {
+                loadAuthState();
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const clearError = useCallback(() => {
         setError(null);
+    }, []);
+
+    // Function to manually set auth data (used after verification)
+    const setAuthData = useCallback((newToken: string, newUser: User) => {
+        setToken(newToken);
+        setUser(newUser);
+        localStorage.setItem(TOKEN_KEY, newToken);
+        localStorage.setItem(USER_KEY, JSON.stringify(newUser));
     }, []);
 
     const login = useCallback(async (data: LoginRequest) => {
@@ -108,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         logout,
+        setAuthData,
         error,
         clearError,
     };
@@ -136,3 +160,4 @@ export function getRedirectPath(user: User): string {
             return '/dashboard';
     }
 }
+

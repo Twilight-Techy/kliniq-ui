@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { onboardingApi, LanguageOption } from "@/lib/onboarding-api"
+import { ApiError } from "@/lib/api-client"
 import {
   ArrowRight,
   ArrowLeft,
   Check,
   Globe,
   User,
-  Stethoscope,
+  Building2,
   Phone,
   Calendar,
   MapPin,
@@ -21,53 +25,91 @@ import {
   Volume2,
   Link2,
   Search,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Step = 1 | 2 | 3
 
 interface Language {
-  id: string
+  id: LanguageOption
   name: string
   nativeName: string
   greeting: string
   flag: string
 }
 
+// Only supported languages: English, Hausa, Igbo, Yoruba
 const languages: Language[] = [
-  { id: "en", name: "English", nativeName: "English", greeting: "Hello!", flag: "🇬🇧" },
-  { id: "yo", name: "Yoruba", nativeName: "Èdè Yorùbá", greeting: "Ẹ káàbọ̀!", flag: "🇳🇬" },
-  { id: "ha", name: "Hausa", nativeName: "Harshen Hausa", greeting: "Sannu!", flag: "🇳🇬" },
-  { id: "ig", name: "Igbo", nativeName: "Asụsụ Igbo", greeting: "Nnọọ!", flag: "🇳🇬" },
-  { id: "pcm", name: "Pidgin", nativeName: "Naija Pidgin", greeting: "How you dey!", flag: "🇳🇬" },
-  { id: "sw", name: "Swahili", nativeName: "Kiswahili", greeting: "Habari!", flag: "🇰🇪" },
-  { id: "am", name: "Amharic", nativeName: "አማርኛ", greeting: "ሰላም!", flag: "🇪🇹" },
-  { id: "zu", name: "Zulu", nativeName: "isiZulu", greeting: "Sawubona!", flag: "🇿🇦" },
+  { id: "english", name: "English", nativeName: "English", greeting: "Hello!", flag: "🇬🇧" },
+  { id: "yoruba", name: "Yoruba", nativeName: "Èdè Yorùbá", greeting: "Ẹ káàbọ̀!", flag: "🇳🇬" },
+  { id: "hausa", name: "Hausa", nativeName: "Harshen Hausa", greeting: "Sannu!", flag: "🇳🇬" },
+  { id: "igbo", name: "Igbo", nativeName: "Asụsụ Igbo", greeting: "Nnọọ!", flag: "🇳🇬" },
 ]
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { toast } = useToast()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Form state
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption | null>(null)
   const [playingAudio, setPlayingAudio] = useState<string | null>(null)
   const [profile, setProfile] = useState({
-    firstName: "",
-    lastName: "",
     phone: "",
     dateOfBirth: "",
-    location: "",
+    gender: "",
+    city: "",
+    state: "",
   })
-  const [doctorCode, setDoctorCode] = useState("")
+  const [hospitalCode, setHospitalCode] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [linkedDoctor, setLinkedDoctor] = useState<{ name: string; hospital: string; specialty: string } | null>(null)
+  const [linkedHospital, setLinkedHospital] = useState<{ name: string; location: string; type: string } | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/auth")
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  // Check onboarding status
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (!isAuthenticated) return
+
+      try {
+        const status = await onboardingApi.getStatus()
+        if (status.onboarding_completed) {
+          // Already completed onboarding, redirect to dashboard
+          router.push("/dashboard")
+        }
+      } catch (err) {
+        // If error, continue with onboarding
+        console.error("Failed to check onboarding status:", err)
+      }
+    }
+
+    if (mounted && isAuthenticated) {
+      checkOnboardingStatus()
+    }
+  }, [mounted, isAuthenticated, router])
+
+  // Pre-fill phone from user data if available
+  useEffect(() => {
+    if (user?.phone) {
+      setProfile(prev => ({ ...prev, phone: user.phone || "" }))
+    }
+  }, [user])
 
   const handlePlayGreeting = (langId: string) => {
     setPlayingAudio(langId)
@@ -75,21 +117,83 @@ export default function OnboardingPage() {
     setTimeout(() => setPlayingAudio(null), 2000)
   }
 
-  const handleLinkDoctor = () => {
-    if (doctorCode.length >= 6) {
-      // Simulate doctor lookup
-      setLinkedDoctor({
-        name: "Dr. Oluwaseun Adeyemi",
-        hospital: "Lagos University Teaching Hospital",
-        specialty: "General Medicine",
+  const handleLinkHospital = () => {
+    if (hospitalCode.length >= 6) {
+      // Simulate hospital lookup (will be implemented with real API later)
+      setLinkedHospital({
+        name: "Lagos University Teaching Hospital",
+        location: "Idi-Araba, Lagos",
+        type: "Teaching Hospital",
       })
+    }
+  }
+
+  const handleStepChange = async (nextStep: Step) => {
+    setIsSaving(true)
+
+    try {
+      // Save data for current step before moving to next
+      if (currentStep === 1 && selectedLanguage) {
+        await onboardingApi.setLanguage(selectedLanguage)
+      } else if (currentStep === 2) {
+        await onboardingApi.updateProfile({
+          phone: profile.phone || undefined,
+          date_of_birth: profile.dateOfBirth || undefined,
+          gender: profile.gender || undefined,
+          city: profile.city || undefined,
+          state: profile.state || undefined,
+        })
+      }
+
+      setCurrentStep(nextStep)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast({
+          variant: "destructive",
+          title: "Failed to save",
+          description: err.message,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save your information. Please try again.",
+        })
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 
   const handleComplete = async () => {
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push("/dashboard")
+
+    try {
+      // Complete onboarding
+      await onboardingApi.complete()
+
+      toast({
+        title: "Welcome to Kliniq!",
+        description: "Your profile is set up. Let's get started!",
+      })
+
+      router.push("/dashboard")
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast({
+          variant: "destructive",
+          title: "Failed to complete",
+          description: err.message,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to complete onboarding. Please try again.",
+        })
+      }
+      setIsLoading(false)
+    }
   }
 
   const canProceed = () => {
@@ -97,9 +201,9 @@ export default function OnboardingPage() {
       case 1:
         return selectedLanguage !== null
       case 2:
-        return profile.firstName && profile.lastName && profile.phone
+        return profile.phone.length > 0
       case 3:
-        return true // Doctor linking is optional
+        return true // Hospital linking is optional
       default:
         return false
     }
@@ -108,10 +212,16 @@ export default function OnboardingPage() {
   const steps = [
     { number: 1, label: "Language", icon: Globe },
     { number: 2, label: "Profile", icon: User },
-    { number: 3, label: "Link Doctor", icon: Stethoscope },
+    { number: 3, label: "Link Hospital", icon: Building2 },
   ]
 
-  if (!mounted) return null
+  if (!mounted || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -286,19 +396,27 @@ export default function OnboardingPage() {
                       <h3 className="font-semibold text-foreground mb-0.5">{lang.name}</h3>
                       <p className="text-xs text-muted-foreground mb-3">{lang.nativeName}</p>
 
-                      <button
+                      <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           e.stopPropagation()
                           handlePlayGreeting(lang.id)
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.stopPropagation()
+                            handlePlayGreeting(lang.id)
+                          }
+                        }}
                         className={cn(
-                          "flex items-center gap-2 text-xs font-medium transition-colors",
+                          "flex items-center gap-2 text-xs font-medium transition-colors cursor-pointer",
                           playingAudio === lang.id ? "text-primary" : "text-muted-foreground hover:text-primary",
                         )}
                       >
                         <Volume2 className={cn("w-3.5 h-3.5", playingAudio === lang.id && "animate-pulse")} />
                         <span>{lang.greeting}</span>
-                      </button>
+                      </span>
                     </div>
                   </motion.button>
                 ))}
@@ -316,47 +434,14 @@ export default function OnboardingPage() {
               className="max-w-lg mx-auto space-y-8"
             >
               <div className="text-center">
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Tell Us About Yourself</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Complete Your Profile</h1>
                 <p className="text-muted-foreground text-lg">This helps us personalize your healthcare experience</p>
               </div>
 
               <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-foreground">
-                      First Name
-                    </Label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        id="firstName"
-                        value={profile.firstName}
-                        onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                        placeholder="First name"
-                        className="pl-12 h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-foreground">
-                      Last Name
-                    </Label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        id="lastName"
-                        value={profile.lastName}
-                        onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                        placeholder="Last name"
-                        className="pl-12 h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-foreground">
-                    Phone Number
+                    Phone Number <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -387,18 +472,32 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-foreground">
-                    Location (Optional)
-                  </Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-foreground">
+                      City
+                    </Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="city"
+                        value={profile.city}
+                        onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                        placeholder="Lagos"
+                        className="pl-12 h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-foreground">
+                      State
+                    </Label>
                     <Input
-                      id="location"
-                      value={profile.location}
-                      onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                      placeholder="City, State"
-                      className="pl-12 h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20"
+                      id="state"
+                      value={profile.state}
+                      onChange={(e) => setProfile({ ...profile, state: e.target.value })}
+                      placeholder="Lagos State"
+                      className="h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20"
                     />
                   </div>
                 </div>
@@ -416,9 +515,9 @@ export default function OnboardingPage() {
               className="max-w-lg mx-auto space-y-8"
             >
               <div className="text-center">
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Link Your Doctor</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Link Your Hospital</h1>
                 <p className="text-muted-foreground text-lg">
-                  Connect with your healthcare provider for seamless communication
+                  Connect with a healthcare facility for seamless medical services
                 </p>
               </div>
 
@@ -433,22 +532,22 @@ export default function OnboardingPage() {
                         <Link2 className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground">Enter Doctor Code</h3>
-                        <p className="text-xs text-muted-foreground">Found on your doctor's visiting card</p>
+                        <h3 className="font-semibold text-foreground">Enter Hospital Code</h3>
+                        <p className="text-xs text-muted-foreground">Found on hospital registration documents</p>
                       </div>
                     </div>
 
                     <div className="flex gap-3">
                       <Input
-                        value={doctorCode}
-                        onChange={(e) => setDoctorCode(e.target.value.toUpperCase())}
-                        placeholder="e.g., DOC-A1B2C3"
-                        maxLength={10}
+                        value={hospitalCode}
+                        onChange={(e) => setHospitalCode(e.target.value.toUpperCase())}
+                        placeholder="e.g., HOSP-A1B2C3"
+                        maxLength={12}
                         className="h-12 bg-background/50 border-border/50 rounded-xl focus:border-primary font-mono text-lg tracking-wider uppercase"
                       />
                       <Button
-                        onClick={handleLinkDoctor}
-                        disabled={doctorCode.length < 6}
+                        onClick={handleLinkHospital}
+                        disabled={hospitalCode.length < 6}
                         className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90"
                       >
                         Link
@@ -474,15 +573,15 @@ export default function OnboardingPage() {
                     <Input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by doctor name or hospital..."
+                      placeholder="Search by hospital name or location..."
                       className="pl-12 h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary"
                     />
                   </div>
                 </div>
 
-                {/* Linked Doctor Card */}
+                {/* Linked Hospital Card */}
                 <AnimatePresence>
-                  {linkedDoctor && (
+                  {linkedHospital && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -491,17 +590,17 @@ export default function OnboardingPage() {
                     >
                       <div className="flex items-start gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
-                          <Stethoscope className="w-7 h-7 text-primary-foreground" />
+                          <Building2 className="w-7 h-7 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground truncate">{linkedDoctor.name}</h3>
+                            <h3 className="font-semibold text-foreground truncate">{linkedHospital.name}</h3>
                             <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                               <Check className="w-3 h-3 text-green-500" />
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">{linkedDoctor.specialty}</p>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">{linkedDoctor.hospital}</p>
+                          <p className="text-sm text-muted-foreground">{linkedHospital.type}</p>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">{linkedHospital.location}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -510,7 +609,7 @@ export default function OnboardingPage() {
 
                 {/* Skip hint */}
                 <p className="text-center text-sm text-muted-foreground">
-                  You can also skip this step and link your doctor later
+                  You can also skip this step and link a hospital later
                 </p>
               </div>
             </motion.div>
@@ -522,7 +621,7 @@ export default function OnboardingPage() {
           <Button
             variant="ghost"
             onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as Step) : prev))}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || isSaving}
             className="h-12 px-6 rounded-xl text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -532,17 +631,17 @@ export default function OnboardingPage() {
           <Button
             onClick={() => {
               if (currentStep < 3) {
-                setCurrentStep((prev) => (prev + 1) as Step)
+                handleStepChange((currentStep + 1) as Step)
               } else {
                 handleComplete()
               }
             }}
-            disabled={!canProceed() || isLoading}
+            disabled={!canProceed() || isLoading || isSaving}
             className="relative h-12 px-8 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
           >
             <span className="flex items-center gap-2">
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              {isLoading || isSaving ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
                   {currentStep === 3 ? "Complete Setup" : "Continue"}

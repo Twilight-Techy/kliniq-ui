@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import { authApi } from "@/lib/auth-api"
 import { ApiError } from "@/lib/api-client"
 import { CheckCircle, Mail, ArrowRight, Loader2 } from "lucide-react"
@@ -17,6 +18,7 @@ function VerifyContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const { toast } = useToast()
+    const { setAuthData } = useAuth()
 
     const [email, setEmail] = useState("")
     const [code, setCode] = useState("")
@@ -61,9 +63,8 @@ function VerifyContent() {
 
             setIsVerified(true)
 
-            // Store token and redirect after short delay
-            localStorage.setItem("kliniq_token", response.access_token)
-            localStorage.setItem("kliniq_user", JSON.stringify(response.user))
+            // Update auth context state (this also updates localStorage)
+            setAuthData(response.access_token, response.user)
 
             toast({
                 title: "Email verified!",
@@ -217,7 +218,7 @@ function VerifyContent() {
                                         type="text"
                                         placeholder="Enter 6-character code"
                                         value={code}
-                                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                        onChange={(e) => setCode(e.target.value)}
                                         className="h-12 bg-secondary/30 border-border/50 rounded-xl focus:border-primary focus:ring-primary/20 transition-all duration-300 text-center text-lg tracking-widest font-mono"
                                         maxLength={10}
                                         required

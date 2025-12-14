@@ -50,18 +50,22 @@ export function PatientSidebar({ activePath, sidebarOpen = false, onClose }: Pat
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/20 to-transparent rounded-bl-full" />
                 <div className="relative flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-lg">
-                        A
+                        {user?.first_name?.charAt(0).toUpperCase() || 'P'}
                     </div>
                     <div>
-                        <p className="font-semibold text-foreground">Adebayo Ogundimu</p>
-                        <p className="text-xs text-muted-foreground">Patient ID: KLQ-2847</p>
+                        <p className="font-semibold text-foreground">
+                            {user ? `${user.first_name} ${user.last_name}` : 'Patient'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            ID: {user?.id ? `KLQ-${user.id.substring(0, 4).toUpperCase()}` : 'N/A'}
+                        </p>
                     </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span>Yoruba</span>
+                    <span>{user?.role === 'patient' ? 'Patient' : 'User'}</span>
                     <span className="text-border">•</span>
-                    <span>Lagos, Nigeria</span>
+                    <span>{user?.is_verified ? 'Verified' : 'Not Verified'}</span>
                 </div>
             </div>
 

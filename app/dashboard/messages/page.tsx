@@ -51,6 +51,7 @@ interface LocalMessage {
     originalLanguage?: string  // Language audio was spoken in
     transcripts?: Record<string, string>  // All cached transcripts by language
     selectedTranscriptLang?: string  // Currently selected language for viewing
+    translatingTo?: string  // Language currently being translated to (loading state)
     attachment?: {
         name: string
         url?: string
@@ -640,12 +641,12 @@ export default function MessagesPage() {
                                                                                     preferredLang,  // override language (what audio is in)
                                                                                     preferredLang   // view in this language
                                                                                 )
-                                                                                if (result.text) {
+                                                                                if (result.transcripts) {
                                                                                     setMessages(prev => prev.map(m =>
                                                                                         m.id === message.id
                                                                                             ? {
                                                                                                 ...m,
-                                                                                                transcripts: { ...(m.transcripts || {}), [preferredLang]: result.text },
+                                                                                                transcripts: result.transcripts,
                                                                                                 originalLanguage: result.original_language || preferredLang,
                                                                                                 selectedTranscriptLang: preferredLang
                                                                                             }
@@ -671,67 +672,127 @@ export default function MessagesPage() {
                                                                         animate={{ opacity: 1, height: "auto" }}
                                                                         className="mt-3 pt-3 border-t border-primary-foreground/20"
                                                                     >
-                                                                        {/* Header with language selector */}
-                                                                        <div className="flex items-center justify-between mb-2">
-                                                                            <p className="text-xs opacity-70">
-                                                                                {message.originalLanguage
-                                                                                    ? `Original: ${message.originalLanguage.charAt(0).toUpperCase() + message.originalLanguage.slice(1)}`
-                                                                                    : "Transcript"
-                                                                                }
-                                                                            </p>
-                                                                            {/* Language selector */}
-                                                                            <select
-                                                                                className="text-xs bg-white/10 rounded px-2 py-1 border-none outline-none cursor-pointer"
-                                                                                value={message.selectedTranscriptLang || message.originalLanguage || "english"}
-                                                                                onChange={async (e) => {
-                                                                                    const selectedLang = e.target.value
+                                                                        {/* Language selectors row */}
+                                                                        <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+                                                                            {/* Original Language selector - triggers re-transcription */}
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="opacity-70">Audio in:</span>
+                                                                                <select
+                                                                                    className="bg-white/10 rounded px-2 py-1 border-none outline-none cursor-pointer"
+                                                                                    value={message.originalLanguage || "english"}
+                                                                                    onChange={async (e) => {
+                                                                                        const overrideLang = e.target.value
 
-                                                                                    // Update the selected language immediately
-                                                                                    setMessages(prev => prev.map(m =>
-                                                                                        m.id === message.id
-                                                                                            ? { ...m, selectedTranscriptLang: selectedLang }
-                                                                                            : m
-                                                                                    ))
+                                                                                        // Show loading state
+                                                                                        setMessages(prev => prev.map(m =>
+                                                                                            m.id === message.id
+                                                                                                ? { ...m, transcripts: undefined, originalLanguage: overrideLang }
+                                                                                                : m
+                                                                                        ))
 
-                                                                                    // Check if transcript exists in cache
-                                                                                    if (message.transcripts?.[selectedLang]) {
-                                                                                        // Already cached, no API call needed
-                                                                                        return
-                                                                                    }
+                                                                                        try {
+                                                                                            const result = await messagesApi.transcribeMessage(
+                                                                                                message.id,
+                                                                                                overrideLang,  // Re-transcribe in this language
+                                                                                                message.selectedTranscriptLang || overrideLang
+                                                                                            )
+                                                                                            if (result.transcripts) {
+                                                                                                setMessages(prev => prev.map(m =>
+                                                                                                    m.id === message.id
+                                                                                                        ? {
+                                                                                                            ...m,
+                                                                                                            transcripts: result.transcripts,
+                                                                                                            originalLanguage: result.original_language || overrideLang,
+                                                                                                            selectedTranscriptLang: message.selectedTranscriptLang || overrideLang
+                                                                                                        }
+                                                                                                        : m
+                                                                                                ))
+                                                                                            }
+                                                                                        } catch (error) {
+                                                                                            toast({
+                                                                                                title: "Transcription failed",
+                                                                                                description: "Could not transcribe audio.",
+                                                                                                variant: "destructive"
+                                                                                            })
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    <option value="english">🇬🇧 English</option>
+                                                                                    <option value="yoruba">🗣️ Yoruba</option>
+                                                                                    <option value="hausa">🗣️ Hausa</option>
+                                                                                    <option value="igbo">🗣️ Igbo</option>
+                                                                                </select>
+                                                                            </div>
 
-                                                                                    // Need to call API for translation
-                                                                                    try {
-                                                                                        const result = await messagesApi.transcribeMessage(
-                                                                                            message.id,
-                                                                                            undefined,  // don't override, use stored original language
-                                                                                            selectedLang  // view in this language
-                                                                                        )
-                                                                                        if (result.text) {
+                                                                            {/* Display Language selector - calls API if translation is missing */}
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="opacity-70">View in:</span>
+                                                                                <select
+                                                                                    className="bg-white/10 rounded px-2 py-1 border-none outline-none cursor-pointer"
+                                                                                    value={message.selectedTranscriptLang || message.originalLanguage || "english"}
+                                                                                    onChange={async (e) => {
+                                                                                        const displayLang = e.target.value
+
+                                                                                        // Update selected language immediately
+                                                                                        setMessages(prev => prev.map(m =>
+                                                                                            m.id === message.id
+                                                                                                ? { ...m, selectedTranscriptLang: displayLang }
+                                                                                                : m
+                                                                                        ))
+
+                                                                                        // If translation exists, we're done
+                                                                                        if (message.transcripts?.[displayLang]) {
+                                                                                            return
+                                                                                        }
+
+                                                                                        // Set loading state
+                                                                                        setMessages(prev => prev.map(m =>
+                                                                                            m.id === message.id
+                                                                                                ? { ...m, translatingTo: displayLang }
+                                                                                                : m
+                                                                                        ))
+
+                                                                                        // Translation missing - call API to get it
+                                                                                        try {
+                                                                                            const result = await messagesApi.transcribeMessage(
+                                                                                                message.id,
+                                                                                                undefined,  // Don't override - just translate
+                                                                                                displayLang
+                                                                                            )
+                                                                                            if (result.transcripts) {
+                                                                                                setMessages(prev => prev.map(m =>
+                                                                                                    m.id === message.id
+                                                                                                        ? {
+                                                                                                            ...m,
+                                                                                                            transcripts: result.transcripts,
+                                                                                                            selectedTranscriptLang: displayLang,
+                                                                                                            translatingTo: undefined
+                                                                                                        }
+                                                                                                        : m
+                                                                                                ))
+                                                                                            }
+                                                                                        } catch (error) {
+                                                                                            // Clear loading state on error
                                                                                             setMessages(prev => prev.map(m =>
                                                                                                 m.id === message.id
-                                                                                                    ? {
-                                                                                                        ...m,
-                                                                                                        transcripts: { ...(m.transcripts || {}), [selectedLang]: result.text },
-                                                                                                        originalLanguage: result.original_language || m.originalLanguage,
-                                                                                                        selectedTranscriptLang: selectedLang
-                                                                                                    }
+                                                                                                    ? { ...m, translatingTo: undefined }
                                                                                                     : m
                                                                                             ))
+                                                                                            toast({
+                                                                                                title: "Translation failed",
+                                                                                                description: "Could not translate. Please try again.",
+                                                                                                variant: "destructive"
+                                                                                            })
                                                                                         }
-                                                                                    } catch (error) {
-                                                                                        toast({
-                                                                                            title: "Translation failed",
-                                                                                            description: "Could not translate transcript.",
-                                                                                            variant: "destructive"
-                                                                                        })
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                <option value="english">🇬🇧 English</option>
-                                                                                <option value="yoruba">🗣️ Yoruba</option>
-                                                                                <option value="hausa">🗣️ Hausa</option>
-                                                                                <option value="igbo">🗣️ Igbo</option>
-                                                                            </select>
+                                                                                    }}
+                                                                                    disabled={!message.transcripts || Object.keys(message.transcripts).length === 0}
+                                                                                >
+                                                                                    <option value="english">🇬🇧 English</option>
+                                                                                    <option value="yoruba">🗣️ Yoruba</option>
+                                                                                    <option value="hausa">🗣️ Hausa</option>
+                                                                                    <option value="igbo">🗣️ Igbo</option>
+                                                                                </select>
+                                                                            </div>
                                                                         </div>
 
                                                                         {/* Transcript display */}
@@ -739,22 +800,36 @@ export default function MessagesPage() {
                                                                             const displayLang = message.selectedTranscriptLang || message.originalLanguage || "english"
                                                                             const transcriptText = message.transcripts?.[displayLang]
 
-                                                                            if (transcriptText) {
-                                                                                return <p className="text-sm">{transcriptText}</p>
-                                                                            } else if (message.transcripts && Object.keys(message.transcripts).length > 0) {
-                                                                                // Has some transcripts but not in selected language - fetching translation
+                                                                            // Show translating spinner if translating to a new language
+                                                                            if (message.translatingTo) {
+                                                                                const langName = message.translatingTo.charAt(0).toUpperCase() + message.translatingTo.slice(1)
                                                                                 return (
                                                                                     <div className="flex items-center gap-2">
                                                                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                                                                        <p className="text-sm opacity-70">Translating...</p>
+                                                                                        <p className="text-sm opacity-70">Translating to {langName}...</p>
                                                                                     </div>
+                                                                                )
+                                                                            }
+
+                                                                            if (transcriptText) {
+                                                                                return <p className="text-sm">{transcriptText}</p>
+                                                                            } else if (message.transcripts && Object.keys(message.transcripts).length > 0) {
+                                                                                // Has transcripts but not in selected display language
+                                                                                const availableLang = Object.keys(message.transcripts)[0]
+                                                                                return (
+                                                                                    <p className="text-sm">
+                                                                                        {message.transcripts[availableLang]}
+                                                                                        <span className="text-xs opacity-50 ml-2">
+                                                                                            (showing {availableLang})
+                                                                                        </span>
+                                                                                    </p>
                                                                                 )
                                                                             } else {
                                                                                 // No transcripts at all yet - fetching
                                                                                 return (
                                                                                     <div className="flex items-center gap-2">
                                                                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                                                                        <p className="text-sm opacity-70">Transcribing...</p>
+                                                                                        <p className="text-sm opacity-70">Transcribing & translating...</p>
                                                                                     </div>
                                                                                 )
                                                                             }

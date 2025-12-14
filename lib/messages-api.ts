@@ -85,6 +85,16 @@ export interface MarkReadResponse {
     marked_count: number
 }
 
+export interface TranscriptionResponse {
+    text: string
+    transcripts?: Record<string, string>  // All language transcripts {"english": "...", "yoruba": "..."}
+    language: string
+    original_language?: string
+    cached: boolean
+    translated: boolean
+    error?: string
+}
+
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
@@ -176,16 +186,6 @@ export const messagesApi = {
             : `/messages/messages/${messageId}/transcribe`
         return apiClient.post<TranscriptionResponse>(url, {}, token)
     },
-}
-
-// Transcription response type
-export interface TranscriptionResponse {
-    text: string
-    language?: string          // Language the transcript is in (viewer's preferred)
-    original_language?: string // Language the audio was spoken in
-    cached?: boolean
-    translated?: boolean       // True if transcript was translated
-    error?: string
 }
 
 // Additional types for available clinicians

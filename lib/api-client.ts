@@ -2,22 +2,20 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-interface ApiResponse<T> {
-    data?: T;
-    error?: string;
-}
+export class ApiError extends Error {
+    statusCode: number;
 
-class ApiError extends Error {
-    constructor(public statusCode: number, message: string) {
+    constructor(statusCode: number, message: string) {
         super(message);
+        this.statusCode = statusCode;
         this.name = 'ApiError';
     }
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+async function handleResponse<T>(response: Response, hadToken: boolean = false): Promise<T> {
     if (!response.ok) {
-        // Handle token expiry - 401 Unauthorized
-        if (response.status === 401) {
+        // Handle token expiry - 401 Unauthorized (only for authenticated requests)
+        if (response.status === 401 && hadToken) {
             // Clear auth data from localStorage
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('kliniq_token');
@@ -50,7 +48,7 @@ export const apiClient = {
             method: 'GET',
             headers,
         });
-        return handleResponse<T>(response);
+        return handleResponse<T>(response, !!token);
     },
 
     async post<T>(endpoint: string, data?: unknown, token?: string): Promise<T> {
@@ -66,7 +64,7 @@ export const apiClient = {
             headers,
             body: data ? JSON.stringify(data) : undefined,
         });
-        return handleResponse<T>(response);
+        return handleResponse<T>(response, !!token);
     },
 
     async put<T>(endpoint: string, data?: unknown, token?: string): Promise<T> {
@@ -82,7 +80,7 @@ export const apiClient = {
             headers,
             body: data ? JSON.stringify(data) : undefined,
         });
-        return handleResponse<T>(response);
+        return handleResponse<T>(response, !!token);
     },
 
     async delete<T>(endpoint: string, token?: string): Promise<T> {
@@ -97,9 +95,8 @@ export const apiClient = {
             method: 'DELETE',
             headers,
         });
-        return handleResponse<T>(response);
+        return handleResponse<T>(response, !!token);
     },
 };
 
-export { ApiError };
 export default apiClient;

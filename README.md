@@ -97,8 +97,8 @@ In Nigeria, **60%+ of the population** speaks indigenous languages as their prim
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/kliniq.git
-cd kliniq
+git clone https://github.com/your-repo/kliniq-ui.git
+cd kliniq-ui
 
 # Install dependencies
 npm install
@@ -134,7 +134,7 @@ npm start
 ## 📂 Project Structure
 
 ```
-kliniq/
+kliniq-ui/
 ├── app/                    # Next.js App Router pages
 │   ├── (auth)/            # Authentication pages
 │   ├── dashboard/         # Patient dashboard

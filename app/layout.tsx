@@ -21,15 +21,15 @@ export const metadata: Metadata = {
   title: "Kliniq - AI-Powered Clinical Communication for African Healthcare",
   description:
     "The multilingual AI bridge connecting patients, doctors, and nurses across Africa. Better communication, better care.",
-  generator: "v0.app",
+  creator: "Ibrahim Makanjuola (Twilight Techie ✨👑✨",
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        url: "/icon.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-dark-32x32.png",
+        url: "/icon.png",
         media: "(prefers-color-scheme: dark)",
       },
       {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: "/icon.png",
   },
 }
 

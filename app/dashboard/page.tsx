@@ -15,7 +15,8 @@ import type {
   RecordingSummary,
   DoctorNote,
   HealthVitals,
-  RecentChat
+  RecentChat,
+  ToolAction
 } from "@/lib/dashboard-api"
 import {
   MessageSquare,
@@ -43,6 +44,9 @@ import {
   Volume2,
   Home,
   History,
+  CheckCircle2,
+  AlertTriangle,
+  ClipboardList,
 } from "lucide-react"
 
 interface Message {
@@ -51,6 +55,7 @@ interface Message {
   content: string
   timestamp: Date
   isAudio?: boolean
+  toolActions?: ToolAction[]
 }
 
 interface Appointment {
@@ -190,6 +195,7 @@ export default function PatientDashboard() {
         role: "assistant",
         content: response.response,
         timestamp: new Date(),
+        toolActions: response.tool_actions?.length > 0 ? response.tool_actions : undefined,
       }
       setMessages((prev) => [...prev, aiResponse])
     } catch (error) {
@@ -547,7 +553,7 @@ export default function PatientDashboard() {
                       <h3 className="font-semibold text-foreground">Kliniq AI Assistant</h3>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
-                        Speaks Yoruba • Powered by N-ATLaS
+                        Speaks Yoruba • Powered by Gemini
                       </p>
                     </div>
                     <button className="ml-auto p-2 rounded-xl hover:bg-secondary transition-colors">
@@ -593,15 +599,103 @@ export default function PatientDashboard() {
                                 <p className="text-sm">"My head has been hurting since this morning"</p>
                               </motion.div>
                             )}
-                            <p
-                              className={cn(
-                                "text-xs mt-2",
-                                message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground",
-                              )}
-                            >
-                              {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </p>
                           </div>
+
+                          {/* Tool Action Cards */}
+                          {message.toolActions && message.toolActions.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {message.toolActions.map((action, idx) => (
+                                <motion.div
+                                  key={idx}
+                                  initial={{ opacity: 0, y: 5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: idx * 0.1 }}
+                                  className={cn(
+                                    "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                                    action.success
+                                      ? "bg-green-500/10 border-green-500/20"
+                                      : "bg-destructive/10 border-destructive/20"
+                                  )}
+                                >
+                                  <div
+                                    className={cn(
+                                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                      action.success ? "bg-green-500/20" : "bg-destructive/20"
+                                    )}
+                                  >
+                                    {action.tool === "request_appointment" ? (
+                                      <Calendar className={cn("w-4 h-4", action.success ? "text-green-500" : "text-destructive")} />
+                                    ) : action.tool === "create_triage" ? (
+                                      <ClipboardList className={cn("w-4 h-4", action.success ? "text-green-500" : "text-destructive")} />
+                                    ) : action.success ? (
+                                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                    ) : (
+                                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-foreground">
+                                      {action.tool === "request_appointment"
+                                        ? "\ud83d\udcc5 Appointment Requested"
+                                        : action.tool === "create_triage"
+                                          ? "\ud83e\ude7a Triage Created"
+                                          : action.tool}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {action.message}
+                                    </p>
+                                    {action.details && Object.keys(action.details).length > 0 && (
+                                      <div className="flex gap-1.5 mt-1 flex-wrap">
+                                        {action.details.urgency && (
+                                          <span className={cn(
+                                            "text-[10px] px-1.5 py-0.5 rounded-md font-medium",
+                                            action.details.urgency === "urgent" || action.details.urgency_level === "high"
+                                              ? "bg-destructive/20 text-destructive"
+                                              : action.details.urgency === "normal" || action.details.urgency_level === "medium"
+                                                ? "bg-yellow-500/20 text-yellow-600"
+                                                : "bg-green-500/20 text-green-600"
+                                          )}>
+                                            {action.details.urgency || action.details.urgency_level}
+                                          </span>
+                                        )}
+                                        {action.details.urgency_level && !action.details.urgency && (
+                                          <span className={cn(
+                                            "text-[10px] px-1.5 py-0.5 rounded-md font-medium",
+                                            action.details.urgency_level === "high"
+                                              ? "bg-destructive/20 text-destructive"
+                                              : action.details.urgency_level === "medium"
+                                                ? "bg-yellow-500/20 text-yellow-600"
+                                                : "bg-green-500/20 text-green-600"
+                                          )}>
+                                            {action.details.urgency_level}
+                                          </span>
+                                        )}
+                                        {action.details.department && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
+                                            {action.details.department}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {action.success ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                                  ) : (
+                                    <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                                  )}
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+
+                          <p
+                            className={cn(
+                              "text-xs mt-2",
+                              message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground",
+                            )}
+                          >
+                            {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
                         </div>
                       </motion.div>
                     ))}
@@ -1038,12 +1132,13 @@ export default function PatientDashboard() {
             )}
           </AnimatePresence>
         </div>
-      </main>
+      </main >
 
       {/* Link Hospital Modal */}
-      <LinkHospitalModal
+      < LinkHospitalModal
         isOpen={showLinkHospitalModal}
-        onClose={() => setShowLinkHospitalModal(false)}
+        onClose={() => setShowLinkHospitalModal(false)
+        }
         onLinked={(hospital) => {
           // Convert API response to local format
           const newHospital = {
@@ -1060,6 +1155,6 @@ export default function PatientDashboard() {
         }}
         linkedHospitalIds={linkedHospitals.map(h => h.id)}
       />
-    </div>
+    </div >
   )
 }

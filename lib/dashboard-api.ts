@@ -123,9 +123,17 @@ export interface ChatRequest {
   chat_id?: string
 }
 
+export interface ToolAction {
+  tool: string
+  success: boolean
+  message: string
+  details: Record<string, string>
+}
+
 export interface ChatResponse {
   chat_id: string
   response: string
+  tool_actions: ToolAction[]
   usage?: Record<string, number>
 }
 

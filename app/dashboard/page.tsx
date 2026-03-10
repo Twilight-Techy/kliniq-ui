@@ -318,6 +318,7 @@ export default function PatientDashboard() {
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 rounded-xl hover:bg-secondary transition-colors"
+                aria-label="Open sidebar menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -330,6 +331,7 @@ export default function PatientDashboard() {
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 rounded-xl hover:bg-secondary transition-colors"
+                aria-label="Toggle notifications"
               >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
@@ -492,7 +494,7 @@ export default function PatientDashboard() {
                 }}
                 className="relative group p-5 rounded-2xl bg-card border border-border/50 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div
                   className={cn(
                     "relative w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3",
@@ -542,9 +544,9 @@ export default function PatientDashboard() {
                 {/* Chat Area */}
                 <div className="lg:col-span-2 flex flex-col bg-card rounded-3xl border border-border/50 overflow-hidden h-[600px]">
                   {/* Chat Header */}
-                  <div className="flex items-center gap-4 p-5 border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-accent/5">
+                  <div className="flex items-center gap-4 p-5 border-b border-border/50 bg-linear-to-r from-primary/5 via-transparent to-accent/5">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-xl bg-linear-to-br from-primary to-accent flex items-center justify-center">
                         <Bot className="w-6 h-6 text-primary-foreground" />
                       </div>
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-card" />
@@ -556,7 +558,7 @@ export default function PatientDashboard() {
                         Speaks Yoruba • Powered by Gemini
                       </p>
                     </div>
-                    <button className="ml-auto p-2 rounded-xl hover:bg-secondary transition-colors">
+                    <button className="ml-auto p-2 rounded-xl hover:bg-secondary transition-colors" aria-label="Toggle audio">
                       <Volume2 className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
@@ -574,7 +576,7 @@ export default function PatientDashboard() {
                           className={cn(
                             "max-w-[85%] rounded-2xl",
                             message.role === "user"
-                              ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-br-md"
+                              ? "bg-linear-to-br from-primary to-primary/80 text-primary-foreground rounded-br-md"
                               : "bg-secondary/50 text-foreground rounded-bl-md",
                           )}
                         >
@@ -703,18 +705,9 @@ export default function PatientDashboard() {
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                         <div className="bg-secondary/50 p-4 rounded-2xl rounded-bl-md">
                           <div className="flex items-center gap-1">
-                            <span
-                              className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                              style={{ animationDelay: "0ms" }}
-                            />
-                            <span
-                              className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                              style={{ animationDelay: "150ms" }}
-                            />
-                            <span
-                              className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                              style={{ animationDelay: "300ms" }}
-                            />
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
                           </div>
                         </div>
                       </motion.div>
@@ -723,7 +716,7 @@ export default function PatientDashboard() {
                   </div>
 
                   {/* Input Area */}
-                  <div className="p-5 border-t border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-accent/5">
+                  <div className="p-5 border-t border-border/50 bg-linear-to-r from-primary/5 via-transparent to-accent/5">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={toggleRecording}
@@ -748,7 +741,7 @@ export default function PatientDashboard() {
                       <Button
                         onClick={handleSendMessage}
                         disabled={!inputValue.trim()}
-                        className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 p-0"
+                        className="h-12 w-12 rounded-xl bg-linear-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 p-0"
                       >
                         <Send className="w-5 h-5" />
                       </Button>
@@ -822,7 +815,7 @@ export default function PatientDashboard() {
                     </div>
                     <button
                       onClick={() => window.location.href = "/dashboard/consultations"}
-                      className="w-full p-4 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 hover:from-primary/20 hover:to-accent/20 transition-all mb-4 group"
+                      className="w-full p-4 rounded-xl bg-linear-to-br from-primary/10 to-accent/10 border border-primary/20 hover:from-primary/20 hover:to-accent/20 transition-all mb-4 group"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -882,12 +875,12 @@ export default function PatientDashboard() {
                       Health Overview
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
+                      <div className="p-3 rounded-xl bg-linear-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
                         <Heart className="w-5 h-5 text-green-500 mb-2" />
                         <p className="text-lg font-bold text-foreground">{healthVitals?.heart_rate ?? '--'}</p>
                         <p className="text-xs text-muted-foreground">Heart Rate</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                      <div className="p-3 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20">
                         <Activity className="w-5 h-5 text-primary mb-2" />
                         <p className="text-lg font-bold text-foreground">{healthVitals?.blood_pressure ?? '--/--'}</p>
                         <p className="text-xs text-muted-foreground">Blood Pressure</p>

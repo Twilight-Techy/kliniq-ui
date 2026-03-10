@@ -354,7 +354,7 @@ export default function PatientDashboard() {
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute right-4 sm:right-6 top-2 w-80 bg-card border border-border/50 rounded-2xl shadow-xl overflow-hidden z-50"
               >
-                <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-accent/5">
+                <div className="p-4 border-b border-border/50 bg-linear-to-r from-primary/5 to-accent/5">
                   <h3 className="font-semibold text-foreground">Notifications</h3>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
@@ -402,7 +402,7 @@ export default function PatientDashboard() {
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-card border border-destructive/50 rounded-3xl shadow-2xl overflow-hidden z-50"
               >
-                <div className="p-6 border-b border-border/50 bg-gradient-to-r from-destructive/10 to-destructive/5">
+                <div className="p-6 border-b border-border/50 bg-linear-to-r from-destructive/10 to-destructive/5">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-destructive/20 flex items-center justify-center">
                       <Phone className="w-6 h-6 text-destructive" />
@@ -497,7 +497,7 @@ export default function PatientDashboard() {
                 <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div
                   className={cn(
-                    "relative w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3",
+                    "relative w-12 h-12 rounded-xl bg-linear-to-br flex items-center justify-center mb-3",
                     action.color,
                   )}
                 >
@@ -903,7 +903,7 @@ export default function PatientDashboard() {
                   <h2 className="text-xl font-semibold text-foreground">Upcoming Appointments</h2>
                   <Button
                     onClick={() => window.location.href = "/dashboard/appointments"}
-                    className="bg-gradient-to-r from-primary to-primary/80"
+                    className="bg-linear-to-r from-primary to-primary/80"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Request New
@@ -919,11 +919,11 @@ export default function PatientDashboard() {
                       transition={{ delay: index * 0.1 }}
                       className="group relative p-5 bg-card rounded-2xl border border-border/50 overflow-hidden hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all duration-300"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                               {apt.type === "video" ? (
                                 <Video className="w-6 h-6 text-primary" />
                               ) : (
@@ -1046,10 +1046,10 @@ export default function PatientDashboard() {
                       transition={{ delay: index * 0.1 }}
                       className="group relative p-5 bg-card rounded-2xl border border-border/50 overflow-hidden hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all duration-300"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative">
                         <div className="flex items-start gap-4 mb-4">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
+                          <div className="w-14 h-14 rounded-xl bg-linear-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
                             <Stethoscope className="w-7 h-7 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">

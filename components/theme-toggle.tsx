@@ -1,14 +1,14 @@
 "use client"
 
-import type React from "react"
+import React, { useState, useEffect } from "react"
 
-import { useState, useEffect } from "react"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button" // Added import for Button component
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { setTheme, theme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   // useEffect only runs on the client, so now we can safely show the UI

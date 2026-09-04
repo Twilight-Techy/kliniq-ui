@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { cn } from "@/lib/utils"
 import { AdminSidebar } from "@/components/admin-sidebar"
+import { adminApi, formatMoney, type AdminOverview } from "@/lib/admin-api"
 import { useToast } from "@/hooks/use-toast"
 import {
   Building2,
@@ -76,119 +77,9 @@ interface ChartData {
   color: string
 }
 
-const stats: StatCard[] = [
-  {
-    title: "Total Patients",
-    value: "2,847",
-    change: 12.5,
-    changeLabel: "vs last month",
-    icon: Users,
-    gradient: "from-primary to-primary/70",
-  },
-  {
-    title: "Active Clinicians",
-    value: "48",
-    change: 8.2,
-    changeLabel: "vs last month",
-    icon: UserCheck,
-    gradient: "from-accent to-accent/70",
-  },
-  {
-    title: "Consultations",
-    value: "1,234",
-    change: -3.1,
-    changeLabel: "vs last month",
-    icon: Stethoscope,
-    gradient: "from-kliniq-cyan to-kliniq-cyan/70",
-  },
-  {
-    title: "Revenue",
-    value: "₦4.2M",
-    change: 18.7,
-    changeLabel: "vs last month",
-    icon: CreditCard,
-    gradient: "from-green-500 to-green-500/70",
-  },
-]
 
-const clinicians: Clinician[] = [
-  {
-    id: "1",
-    name: "Dr. Oluwaseun Adeyemi",
-    role: "doctor",
-    specialty: "General Practice",
-    avatar: "OA",
-    status: "active",
-    patients: 156,
-    points: 2450,
-    rating: 4.9,
-    lastActive: "Now",
-  },
-  {
-    id: "2",
-    name: "Dr. Amaka Okonkwo",
-    role: "doctor",
-    specialty: "Pediatrics",
-    avatar: "AO",
-    status: "busy",
-    patients: 132,
-    points: 2180,
-    rating: 4.8,
-    lastActive: "10 mins ago",
-  },
-  {
-    id: "3",
-    name: "Nurse Fatima Ibrahim",
-    role: "nurse",
-    avatar: "FI",
-    status: "active",
-    patients: 89,
-    points: 1850,
-    rating: 4.9,
-    lastActive: "Now",
-  },
-  {
-    id: "4",
-    name: "Dr. Chukwuemeka Nwosu",
-    role: "doctor",
-    specialty: "Internal Medicine",
-    avatar: "CN",
-    status: "offline",
-    patients: 178,
-    points: 2890,
-    rating: 4.7,
-    lastActive: "2 hours ago",
-  },
-  {
-    id: "5",
-    name: "Nurse Blessing Eze",
-    role: "nurse",
-    avatar: "BE",
-    status: "active",
-    patients: 67,
-    points: 1420,
-    rating: 4.8,
-    lastActive: "5 mins ago",
-  },
-]
 
-const weeklyData: ChartData[] = [
-  { label: "Mon", value: 65, color: "bg-primary" },
-  { label: "Tue", value: 85, color: "bg-primary" },
-  { label: "Wed", value: 72, color: "bg-primary" },
-  { label: "Thu", value: 90, color: "bg-primary" },
-  { label: "Fri", value: 78, color: "bg-primary" },
-  { label: "Sat", value: 45, color: "bg-primary/60" },
-  { label: "Sun", value: 30, color: "bg-primary/60" },
-]
 
-const departmentData: ChartData[] = [
-  { label: "General Practice", value: 35, color: "bg-primary" },
-  { label: "Pediatrics", value: 25, color: "bg-accent" },
-  { label: "Internal Medicine", value: 20, color: "bg-kliniq-cyan" },
-  { label: "OB/GYN", value: 12, color: "bg-green-500" },
-  { label: "Others", value: 8, color: "bg-muted-foreground" },
-]
 
 const statusStyles = {
   active: "bg-green-500",
@@ -225,6 +116,95 @@ export default function AdminDashboard() {
   const [showActivityFilterDropdown, setShowActivityFilterDropdown] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  const [overview, setOverview] = useState<AdminOverview | null>(null)
+  const [clinicians, setClinicians] = useState<Clinician[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [ov, cl] = await Promise.all([adminApi.getOverview(), adminApi.getClinicians()])
+        if (cancelled) return
+        setOverview(ov)
+        setClinicians(
+          cl.clinicians.map((c) => ({
+            id: c.id,
+            name: c.name,
+            role: (c.role === "nurse" ? "nurse" : "doctor") as "doctor" | "nurse",
+            specialty: c.specialty ?? undefined,
+            avatar: c.avatar_url ?? "",
+            status: (c.is_available ? "active" : "offline") as "active" | "offline" | "busy",
+            patients: c.total_consultations,
+            points: c.points,
+            rating: c.rating ?? 0,
+            lastActive: c.status ?? "",
+          })),
+        )
+      } catch (e: any) {
+        if (!cancelled) setLoadError(e?.message || "Could not load hospital data.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Built from the API. A null change means there is no previous month to
+  // compare against, so we say so instead of showing a delta of zero.
+  const stats: StatCard[] = overview
+    ? [
+        {
+          title: "Total Patients",
+          value: overview.stats.total_patients.toLocaleString(),
+          change: overview.stats.total_patients_change ?? 0,
+          changeLabel: overview.stats.total_patients_change === null ? "no prior month" : "vs last month",
+          icon: Users,
+          gradient: "from-primary to-primary/70",
+        },
+        {
+          title: "Active Clinicians",
+          value: String(overview.stats.active_clinicians),
+          change: 0,
+          changeLabel: `of ${overview.stats.total_clinicians} total`,
+          icon: UserCheck,
+          gradient: "from-accent to-accent/70",
+        },
+        {
+          title: "Consultations",
+          value: overview.stats.consultations.toLocaleString(),
+          change: overview.stats.consultations_change ?? 0,
+          changeLabel: overview.stats.consultations_change === null ? "no prior month" : "vs last month",
+          icon: Stethoscope,
+          gradient: "from-kliniq-cyan to-kliniq-cyan/70",
+        },
+        {
+          title: "Revenue",
+          value: formatMoney(overview.stats.revenue, overview.stats.currency),
+          change: overview.stats.revenue_change ?? 0,
+          changeLabel: overview.stats.revenue_change === null ? "no prior month" : "vs last month",
+          icon: CreditCard,
+          gradient: "from-green-500 to-green-500/70",
+        },
+      ]
+    : []
+
+  // Bars scale against the busiest day so the chart reads at any volume.
+  const weekPeak = Math.max(1, ...(overview?.weekly_consultations.map((d) => d.count) ?? [0]))
+  const weeklyData: ChartData[] = (overview?.weekly_consultations ?? []).map((d) => ({
+    label: d.day,
+    value: Math.round((d.count / weekPeak) * 100),
+    color: d.day === "Sat" || d.day === "Sun" ? "bg-primary/60" : "bg-primary",
+  }))
+
+  const deptColors = ["bg-primary", "bg-accent", "bg-kliniq-cyan", "bg-green-500", "bg-muted-foreground"]
+  const departmentData: ChartData[] = (overview?.departments ?? []).map((d, i) => ({
+    label: d.name,
+    value: d.percentage,
+    color: deptColors[i] ?? "bg-muted-foreground",
+  }))
 
   const periodOptions = ["Today", "This Week", "This Month", "This Quarter", "This Year"]
   const activityTypes = [
@@ -560,23 +540,37 @@ export default function AdminDashboard() {
                       <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white">Premium Plan</h3>
-                      <p className="text-xs text-white/70">Active subscription</p>
+                      <h3 className="font-semibold text-white capitalize">
+                        {overview?.hospital.subscription_plan ?? "Subscription"}
+                      </h3>
+                      <p className="text-xs text-white/70">
+                        {overview?.hospital.days_until_renewal != null
+                          ? `${overview.hospital.days_until_renewal} days until renewal`
+                          : "No renewal date on file"}
+                      </p>
                     </div>
                   </div>
 
+                  {/* Only figures the API actually reports. Seat, API-call and
+                      storage quotas are not modelled, so they are not shown. */}
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-white/80">Clinician Seats</span>
-                      <span className="text-white font-medium">48/50</span>
+                      <span className="text-white/80">Active clinicians</span>
+                      <span className="text-white font-medium">
+                        {overview ? `${overview.stats.active_clinicians}/${overview.stats.total_clinicians}` : "—"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-white/80">API Calls</span>
-                      <span className="text-white font-medium">12,456/20,000</span>
+                      <span className="text-white/80">Patients</span>
+                      <span className="text-white font-medium">
+                        {overview ? overview.stats.total_patients.toLocaleString() : "—"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-white/80">Storage</span>
-                      <span className="text-white font-medium">8.2/10 GB</span>
+                      <span className="text-white/80">Consultations this month</span>
+                      <span className="text-white font-medium">
+                        {overview ? overview.stats.consultations.toLocaleString() : "—"}
+                      </span>
                     </div>
                   </div>
 

@@ -1,5 +1,22 @@
 "use client"
 
+import { adminApi } from "@/lib/admin-api"
+
+type ReportRow = {
+    id: string
+    title: string
+    desc: string
+    date: string
+    type: string
+    icon: React.ComponentType<{ className?: string }>
+    status: string
+    size: string
+    pages: number
+    fileUrl: string | null
+    content: { summary: string; highlights: string[]; metrics: Record<string, string | number> }
+}
+
+
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -11,113 +28,59 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
-const mockReports = [
-    {
-        id: "1",
-        title: "Monthly Performance Report",
-        desc: "Patient volume, revenue, and satisfaction metrics",
-        date: "Generated Dec 1, 2025",
-        type: "performance",
-        icon: BarChart3,
-        status: "ready",
-        size: "2.4 MB",
-        pages: 24,
-        content: {
-            summary: "This comprehensive report covers all key performance indicators for the month of November 2025.",
-            highlights: [
-                "Total patient visits increased by 15% compared to last month",
-                "Average consultation time reduced by 5 minutes",
-                "Patient satisfaction score: 4.7/5.0",
-                "Revenue target achieved: 112%"
-            ],
-            metrics: { patients: 1247, consultations: 3856, revenue: "₦4.2M", satisfaction: "94%" }
-        }
-    },
-    {
-        id: "2",
-        title: "Clinician Activity Report",
-        desc: "Doctor and nurse engagement statistics",
-        date: "Generated Nov 28, 2025",
-        type: "clinician",
-        icon: Users,
-        status: "ready",
-        size: "1.8 MB",
-        pages: 18,
-        content: {
-            summary: "Detailed analysis of clinician activities, patient interactions, and performance metrics.",
-            highlights: [
-                "48 active clinicians (28 doctors, 20 nurses)",
-                "Average rating across all clinicians: 4.8/5.0",
-                "Top performer: Dr. Oluwaseun Adeyemi",
-                "156 new patient registrations attributed to referrals"
-            ],
-            metrics: { clinicians: 48, avgRating: "4.8", consultations: 2847, referrals: 156 }
-        }
-    },
-    {
-        id: "3",
-        title: "Financial Summary",
-        desc: "Revenue breakdown and billing analytics",
-        date: "Generated Nov 25, 2025",
-        type: "financial",
-        icon: DollarSign,
-        status: "ready",
-        size: "3.1 MB",
-        pages: 32,
-        content: {
-            summary: "Complete financial overview including revenue streams, expenses, and profitability analysis.",
-            highlights: [
-                "Total revenue: ₦4.2M (18.7% growth YoY)",
-                "Collection rate: 94.3%",
-                "Outstanding payments: ₦245K",
-                "Operating margin: 32%"
-            ],
-            metrics: { revenue: "₦4.2M", collected: "₦3.96M", pending: "₦245K", growth: "+18.7%" }
-        }
-    },
-    {
-        id: "4",
-        title: "Patient Satisfaction Survey",
-        desc: "Feedback and ratings from patients",
-        date: "Generated Nov 20, 2025",
-        type: "satisfaction",
-        icon: TrendingUp,
-        status: "ready",
-        size: "1.2 MB",
-        pages: 15,
-        content: {
-            summary: "Analysis of patient feedback, satisfaction scores, and improvement recommendations.",
-            highlights: [
-                "Overall satisfaction: 94% positive",
-                "Wait time satisfaction improved by 12%",
-                "Staff courtesy rated highest (4.9/5.0)",
-                "Top suggestion: Extended evening hours"
-            ],
-            metrics: { responses: 892, satisfaction: "94%", nps: 72, recommendations: 15 }
-        }
-    },
-    {
-        id: "5",
-        title: "Weekly Operations Summary",
-        desc: "Operational efficiency and resource utilization",
-        date: "Generated Dec 5, 2025",
-        type: "performance",
-        icon: BarChart3,
-        status: "processing",
-        size: "Processing...",
-        pages: 0,
-        content: {
-            summary: "Weekly overview of operational metrics and resource allocation.",
-            highlights: [
-                "Report is currently being generated",
-                "Expected completion: 2 hours"
-            ],
-            metrics: { patients: 0, consultations: 0, revenue: "N/A", satisfaction: "N/A" }
-        }
-    },
-]
 
 export default function AdminReportsPage() {
+    const [mockReports, setReports] = useState<ReportRow[]>([])
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    // The list stores an icon component per row, so map the report type onto one.
+    const iconForType = (t: string | null) => {
+        switch ((t ?? "").toLowerCase()) {
+            case "financial": return DollarSign
+            case "patient": return Users
+            case "performance": return BarChart3
+            default: return FileText
+        }
+    }
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getReports()
+            .then((res) => {
+                if (cancelled) return
+                setReports(
+                    res.reports.map((r) => ({
+                        id: r.id,
+                        title: r.title,
+                        desc: r.description ?? "",
+                        date: r.created_at
+                            ? `Generated ${new Date(r.created_at).toLocaleDateString(undefined, {
+                                  month: "short", day: "numeric", year: "numeric",
+                              })}`
+                            : "—",
+                        type: (r.type ?? "other").toLowerCase(),
+                        icon: iconForType(r.type),
+                        status: (r.status ?? "ready").toLowerCase(),
+                        size: r.file_size_bytes
+                            ? `${(r.file_size_bytes / 1_048_576).toFixed(1)} MB`
+                            : "—",
+                        pages: r.page_count ?? 0,
+                        fileUrl: r.file_url,
+                        content: {
+                            summary: r.summary ?? "",
+                            highlights: r.highlights ?? [],
+                            metrics: r.metrics ?? {},
+                        },
+                    })),
+                )
+            })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load reports.") })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [])
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")

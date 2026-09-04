@@ -1,5 +1,7 @@
 "use client"
 
+import { adminApi, type AdminSettings } from "@/lib/admin-api"
+
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -10,6 +12,18 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 export default function AdminSettingsPage() {
+    const [hospital, setHospital] = useState<AdminSettings | null>(null)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getSettings()
+            .then((h) => { if (!cancelled) setHospital(h) })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load settings.") })
+        return () => { cancelled = true }
+    }, [])
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -69,16 +83,16 @@ export default function AdminSettingsPage() {
                             <div className="grid gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-foreground mb-2">Hospital Name</label>
-                                    <Input defaultValue="Lagos General Hospital" className="rounded-xl" disabled={!isEditingProfile} />
+                                    <Input key={hospital?.id ?? "loading"} defaultValue={hospital?.name ?? ""} className="rounded-xl" disabled={!isEditingProfile} />
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-                                        <Input defaultValue="admin@lgh.ng" className="rounded-xl" disabled={!isEditingProfile} />
+                                        <Input key={`${hospital?.id ?? "loading"}-email`} defaultValue={hospital?.email ?? ""} className="rounded-xl" disabled={!isEditingProfile} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">Phone</label>
-                                        <Input defaultValue="+234 800 123 4567" className="rounded-xl" disabled={!isEditingProfile} />
+                                        <Input key={`${hospital?.id ?? "loading"}-phone`} defaultValue={hospital?.phone ?? ""} className="rounded-xl" disabled={!isEditingProfile} />
                                     </div>
                                 </div>
                             </div>

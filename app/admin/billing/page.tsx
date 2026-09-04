@@ -1,5 +1,16 @@
 "use client"
 
+import { adminApi, formatMoney } from "@/lib/admin-api"
+
+type InvoiceRow = {
+    id: string
+    client: string
+    amount: string
+    amountRaw: number
+    status: string
+    date: string
+}
+
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -9,15 +20,40 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { useToast } from "@/hooks/use-toast"
 
-const invoices = [
-    { id: "INV-001", client: "Lagos General", amount: "₦125,000", amountRaw: 125000, status: "paid", date: "Dec 1, 2025" },
-    { id: "INV-002", client: "National Hospital", amount: "₦98,500", amountRaw: 98500, status: "pending", date: "Dec 3, 2025" },
-    { id: "INV-003", client: "City Clinic", amount: "₦45,000", amountRaw: 45000, status: "paid", date: "Dec 4, 2025" },
-    { id: "INV-004", client: "Eko Hospital", amount: "₦210,000", amountRaw: 210000, status: "paid", date: "Dec 5, 2025" },
-    { id: "INV-005", client: "Reddington Hospital", amount: "₦87,500", amountRaw: 87500, status: "pending", date: "Dec 6, 2025" },
-]
 
 export default function AdminBillingPage() {
+    const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+    const [totals, setTotals] = useState<{ paid: number; pending: number; count: number } | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getBilling()
+            .then((res) => {
+                if (cancelled) return
+                setTotals(res.totals)
+                setInvoices(
+                    res.invoices.map((i) => ({
+                        id: i.invoice_number,
+                        client: i.description ?? "—",
+                        amount: formatMoney(i.amount, i.currency),
+                        amountRaw: i.amount,
+                        status: (i.status ?? "unknown").toLowerCase(),
+                        date: i.due_date
+                            ? new Date(i.due_date).toLocaleDateString(undefined, {
+                                  month: "short", day: "numeric", year: "numeric",
+                              })
+                            : "—",
+                    })),
+                )
+            })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load billing.") })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [])
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const { toast } = useToast()
@@ -72,8 +108,10 @@ export default function AdminBillingPage() {
                     <div className="max-w-7xl mx-auto space-y-6">
                         <div className="grid gap-6 md:grid-cols-4">
                             {[
-                                { label: "Total Revenue", value: "₦4.2M", icon: DollarSign }, { label: "Pending", value: "₦245K", icon: Clock },
-                                { label: "Collected", value: "₦3.96M", icon: CheckCircle2 }, { label: "Growth", value: "+18.7%", icon: TrendingUp }
+                                { label: "Collected", value: formatMoney(totals?.paid ?? null), icon: DollarSign },
+                                { label: "Pending", value: formatMoney(totals?.pending ?? null), icon: Clock },
+                                { label: "Invoices", value: totals ? String(totals.count) : "—", icon: CheckCircle2 },
+                                { label: "Total billed", value: formatMoney(totals ? totals.paid + totals.pending : null), icon: TrendingUp }
                             ].map((stat, idx) => (
                                 <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
                                     className="p-6 rounded-3xl bg-card border border-border/50">

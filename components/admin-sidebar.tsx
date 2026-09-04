@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import { useEffect, useState } from "react"
+import { adminApi, type AdminSettings } from "@/lib/admin-api"
 import {
     Building2,
     Home,
@@ -40,6 +42,26 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ activePath, sidebarOpen = false, onClose }: AdminSidebarProps) {
+    const [hospital, setHospital] = useState<AdminSettings | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getSettings()
+            .then((h) => { if (!cancelled) setHospital(h) })
+            .catch(() => { /* sidebar degrades to placeholders */ })
+        return () => { cancelled = true }
+    }, [])
+
+    const renewalDays = hospital?.subscription_expires
+        ? Math.max(
+              0,
+              Math.ceil(
+                  (new Date(hospital.subscription_expires).getTime() - Date.now()) / 86_400_000,
+              ),
+          )
+        : null
+
     const router = useRouter()
     const { logout } = useAuth()
 
@@ -75,20 +97,30 @@ export function AdminSidebar({ activePath, sidebarOpen = false, onClose }: Admin
                         <Building2 className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground truncate">Lagos General Hospital</h3>
-                        <p className="text-xs text-muted-foreground">Premium Plan</p>
+                        <h3 className="font-semibold text-foreground truncate">
+                            {hospital?.name ?? "Hospital"}
+                        </h3>
+                        <p className="text-xs text-muted-foreground capitalize">
+                            {hospital?.subscription_plan ?? "—"}
+                        </p>
                     </div>
                 </div>
-                <div className="mt-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Subscription</span>
-                        <span className="text-xs text-muted-foreground">75%</span>
+                {renewalDays !== null && (
+                    <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Subscription</span>
+                            <span className="text-xs text-muted-foreground">
+                                {renewalDays} days left
+                            </span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                                style={{ width: `${Math.min(100, Math.round((renewalDays / 365) * 100))}%` }}
+                            />
+                        </div>
                     </div>
-                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div className="h-full w-3/4 bg-gradient-to-r from-primary to-accent rounded-full" />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">21 days until renewal</p>
-                </div>
+                )}
             </div>
 
             {/* Navigation */}

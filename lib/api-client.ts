@@ -83,6 +83,22 @@ export const apiClient = {
         return handleResponse<T>(response, !!token);
     },
 
+    async patch<T>(endpoint: string, data?: unknown, token?: string): Promise<T> {
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'PATCH',
+            headers,
+            body: data ? JSON.stringify(data) : undefined,
+        });
+        return handleResponse<T>(response, !!token);
+    },
+
     async delete<T>(endpoint: string, token?: string): Promise<T> {
         const headers: HeadersInit = {
             'Content-Type': 'application/json',

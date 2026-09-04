@@ -1,5 +1,7 @@
 "use client"
 
+import { adminApi, formatMoney, formatChange, type AdminOverview } from "@/lib/admin-api"
+
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -10,6 +12,22 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AdminAnalyticsPage() {
+    const [overview, setOverview] = useState<AdminOverview | null>(null)
+    const [analytics, setAnalytics] = useState<{
+        monthly_consultations: { month: string; count: number }[]
+        appointment_status: { status: string; count: number }[]
+        escalated_queries_30d: number
+    } | null>(null)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        Promise.all([adminApi.getOverview(), adminApi.getAnalytics()])
+            .then(([ov, an]) => { if (!cancelled) { setOverview(ov); setAnalytics(an) } })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load analytics.") })
+        return () => { cancelled = true }
+    }, [])
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const { toast } = useToast()
@@ -52,9 +70,24 @@ export default function AdminAnalyticsPage() {
                     <div className="max-w-7xl mx-auto space-y-6">
                         <div className="grid gap-6 md:grid-cols-3">
                             {[
-                                { label: "Revenue (MTD)", value: "₦4.2M", change: "+18.7%", icon: TrendingUp },
-                                { label: "Consultations", value: "1,234", change: "+12.3%", icon: BarChart3 },
-                                { label: "Satisfaction", value: "96%", change: "+2.4%", icon: PieChart }
+                                {
+                                    label: "Revenue (MTD)",
+                                    value: formatMoney(overview?.stats.revenue ?? null, overview?.stats.currency),
+                                    change: formatChange(overview?.stats.revenue_change) ?? "",
+                                    icon: TrendingUp,
+                                },
+                                {
+                                    label: "Consultations",
+                                    value: overview ? overview.stats.consultations.toLocaleString() : "—",
+                                    change: formatChange(overview?.stats.consultations_change) ?? "",
+                                    icon: BarChart3,
+                                },
+                                {
+                                    label: "Escalated queries (30d)",
+                                    value: analytics ? String(analytics.escalated_queries_30d) : "—",
+                                    change: "",
+                                    icon: PieChart,
+                                }
                             ].map((stat, idx) => (
                                 <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
                                     className="p-6 rounded-3xl bg-card border border-border/50">

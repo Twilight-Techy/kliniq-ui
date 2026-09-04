@@ -1,5 +1,22 @@
 "use client"
 
+import { adminApi } from "@/lib/admin-api"
+
+type AdminPatientRow = {
+    id: string
+    name: string
+    age: number | string
+    condition: string
+    lastVisit: string
+    status: string
+    email: string
+    phone: string
+    location: string
+    bloodType: string
+    allergies: string
+    nextAppointment: string
+}
+
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AdminSidebar } from "@/components/admin-sidebar"
@@ -9,22 +26,56 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
-const mockPatients = [
-    { id: "1", name: "Adebayo Okafor", age: 34, condition: "Hypertension", lastVisit: "2 days ago", status: "stable", email: "adebayo@email.com", phone: "+234 801 234 5678", location: "Lagos, Nigeria", bloodType: "O+", allergies: "None", nextAppointment: "Dec 15, 2025" },
-    { id: "2", name: "Chioma Eze", age: 28, condition: "Diabetes", lastVisit: "1 week ago", status: "monitoring", email: "chioma@email.com", phone: "+234 802 345 6789", location: "Abuja, Nigeria", bloodType: "A+", allergies: "Penicillin", nextAppointment: "Dec 12, 2025" },
-    { id: "3", name: "Ibrahim Mohammed", age: 45, condition: "Asthma", lastVisit: "3 days ago", status: "stable", email: "ibrahim@email.com", phone: "+234 803 456 7890", location: "Kano, Nigeria", bloodType: "B+", allergies: "Dust", nextAppointment: "Dec 18, 2025" },
-    { id: "4", name: "Ngozi Okoro", age: 52, condition: "Arthritis", lastVisit: "5 days ago", status: "treatment", email: "ngozi@email.com", phone: "+234 804 567 8901", location: "Port Harcourt, Nigeria", bloodType: "AB-", allergies: "Aspirin", nextAppointment: "Dec 20, 2025" },
-    { id: "5", name: "Emeka Nwankwo", age: 38, condition: "Malaria", lastVisit: "1 day ago", status: "treatment", email: "emeka@email.com", phone: "+234 805 678 9012", location: "Enugu, Nigeria", bloodType: "O-", allergies: "None", nextAppointment: "Dec 11, 2025" },
-    { id: "6", name: "Fatima Abubakar", age: 29, condition: "Pregnancy", lastVisit: "4 days ago", status: "monitoring", email: "fatima@email.com", phone: "+234 806 789 0123", location: "Kaduna, Nigeria", bloodType: "A-", allergies: "Latex", nextAppointment: "Dec 14, 2025" },
-]
 
 export default function AdminPatientsPage() {
+    const [mockPatients, setPatients] = useState<AdminPatientRow[]>([])
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getPatients({ limit: 200 })
+            .then((res) => {
+                if (cancelled) return
+                setPatients(
+                    res.patients.map((pt) => {
+                        const age = pt.date_of_birth
+                            ? Math.floor(
+                                  (Date.now() - new Date(pt.date_of_birth).getTime()) /
+                                      (365.25 * 86_400_000),
+                              )
+                            : "—"
+                        return {
+                            id: pt.id,
+                            name: pt.name,
+                            age,
+                            // Clinical detail is not exposed to hospital admins,
+                            // so these read as unavailable rather than invented.
+                            condition: "—",
+                            lastVisit: "—",
+                            status: pt.onboarding_completed ? "active" : "pending",
+                            email: pt.email,
+                            phone: pt.phone ?? "—",
+                            location: [pt.city, pt.state].filter(Boolean).join(", ") || "—",
+                            bloodType: pt.blood_type ?? "—",
+                            allergies: "—",
+                            nextAppointment: "—",
+                        }
+                    }),
+                )
+            })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load patients.") })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [])
+
     const [mounted, setMounted] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [statusFilter, setStatusFilter] = useState<"all" | "stable" | "monitoring" | "treatment">("all")
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-    const [selectedPatient, setSelectedPatient] = useState<typeof mockPatients[0] | null>(null)
+    const [selectedPatient, setSelectedPatient] = useState<AdminPatientRow | null>(null)
 
     useEffect(() => {
         setMounted(true)

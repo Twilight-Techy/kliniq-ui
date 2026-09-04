@@ -1,5 +1,24 @@
 "use client"
 
+import { adminApi } from "@/lib/admin-api"
+
+type AdminClinicianRow = {
+    id: string
+    name: string
+    role: string
+    specialty: string
+    patients: number
+    points: number
+    rating: number
+    status: string
+    email: string
+    phone: string
+    location: string
+    experience: string
+    consultations: number
+    nextAvailable: string
+}
+
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -11,23 +30,51 @@ import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
-const mockClinicians = [
-    { id: "1", name: "Dr. Oluwaseun Adeyemi", role: "Doctor", specialty: "General Medicine", patients: 156, points: 2450, rating: 4.9, status: "active", email: "oluwaseun@kliniq.com", phone: "+234 801 234 5678", location: "Lagos, Nigeria", experience: "12 years", consultations: 1847, nextAvailable: "Dec 10, 2025" },
-    { id: "2", name: "Nurse Amaka Okonkwo", role: "Nurse", specialty: "Critical Care", patients: 89, points: 1850, rating: 4.8, status: "active", email: "amaka@kliniq.com", phone: "+234 802 345 6789", location: "Lagos, Nigeria", experience: "8 years", consultations: 945, nextAvailable: "Dec 9, 2025" },
-    { id: "3", name: "Dr. Amara Obi", role: "Doctor", specialty: "Cardiology", patients: 132, points: 2180, rating: 4.8, status: "busy", email: "amara@kliniq.com", phone: "+234 803 456 7890", location: "Abuja, Nigeria", experience: "15 years", consultations: 2156, nextAvailable: "Dec 11, 2025" },
-    { id: "4", name: "Dr. Chidinma Nwosu", role: "Doctor", specialty: "Dermatology", patients: 98, points: 1920, rating: 4.7, status: "active", email: "chidinma@kliniq.com", phone: "+234 804 567 8901", location: "Port Harcourt, Nigeria", experience: "10 years", consultations: 1234, nextAvailable: "Dec 9, 2025" },
-    { id: "5", name: "Nurse Blessing Eze", role: "Nurse", specialty: "Pediatric Care", patients: 67, points: 1650, rating: 4.9, status: "active", email: "blessing@kliniq.com", phone: "+234 805 678 9012", location: "Kano, Nigeria", experience: "6 years", consultations: 756, nextAvailable: "Dec 10, 2025" },
-    { id: "6", name: "Dr. Emeka Okafor", role: "Doctor", specialty: "Orthopedics", patients: 121, points: 2100, rating: 4.6, status: "busy", email: "emeka@kliniq.com", phone: "+234 806 789 0123", location: "Enugu, Nigeria", experience: "18 years", consultations: 2890, nextAvailable: "Dec 12, 2025" },
-]
 
 export default function AdminCliniciansPage() {
+    const [mockClinicians, setClinicians] = useState<AdminClinicianRow[]>([])
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getClinicians()
+            .then((res) => {
+                if (cancelled) return
+                setClinicians(
+                    res.clinicians.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                        role: c.role === "nurse" ? "Nurse" : "Doctor",
+                        specialty: c.specialty ?? "—",
+                        // The admin API reports consultations, not a live panel size.
+                        patients: c.total_consultations,
+                        points: c.points,
+                        rating: c.rating ?? 0,
+                        status: c.is_available ? "active" : (c.status ?? "offline"),
+                        email: c.email,
+                        phone: c.phone ?? "—",
+                        location: "—",
+                        experience:
+                            c.years_of_experience != null ? `${c.years_of_experience} years` : "—",
+                        consultations: c.total_consultations,
+                        nextAvailable: c.is_available ? "Available now" : "—",
+                    })),
+                )
+            })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load clinicians.") })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [])
+
     const [mounted, setMounted] = useState(false)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [roleFilter, setRoleFilter] = useState<"all" | "doctor" | "nurse">("all")
     const [statusFilter, setStatusFilter] = useState<"all" | "active" | "busy">("all")
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-    const [selectedClinician, setSelectedClinician] = useState<typeof mockClinicians[0] | null>(null)
+    const [selectedClinician, setSelectedClinician] = useState<AdminClinicianRow | null>(null)
     const { toast } = useToast()
 
     useEffect(() => setMounted(true), [])

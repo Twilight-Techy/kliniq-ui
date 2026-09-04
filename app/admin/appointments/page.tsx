@@ -1,5 +1,23 @@
 "use client"
 
+import { adminApi } from "@/lib/admin-api"
+
+type AdminAppointmentRow = {
+    id: string
+    patient: string
+    patientAge: number | string
+    doctor: string
+    specialty: string
+    date: string
+    time: string
+    duration: string
+    status: string
+    type: string
+    location: string
+    notes: string
+    phone: string
+}
+
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AdminSidebar } from "@/components/admin-sidebar"
@@ -10,22 +28,51 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const mockAppointments = [
-    { id: "1", patient: "Adebayo Okafor", patientAge: 34, doctor: "Dr. Oluwaseun Adeyemi", specialty: "General Medicine", date: "Dec 9, 2025", time: "10:00 AM", duration: "30 min", status: "completed", type: "Check-up", location: "Room 101", notes: "Regular follow-up for hypertension management", phone: "+234 801 234 5678" },
-    { id: "2", patient: "Chioma Eze", patientAge: 28, doctor: "Dr. Amara Obi", specialty: "Cardiology", date: "Dec 9, 2025", time: "11:30 AM", duration: "45 min", status: "in-progress", type: "Consultation", location: "Room 203", notes: "Diabetes monitoring and insulin adjustment", phone: "+234 802 345 6789" },
-    { id: "3", patient: "Ibrahim Mohammed", patientAge: 45, doctor: "Nurse Amaka Okonkwo", specialty: "Critical Care", date: "Dec 9, 2025", time: "2:00 PM", duration: "30 min", status: "upcoming", type: "Follow-up", location: "Room 105", notes: "Asthma review and inhaler prescription renewal", phone: "+234 803 456 7890" },
-    { id: "4", patient: "Ngozi Okoro", patientAge: 52, doctor: "Dr. Chidinma Nwosu", specialty: "Dermatology", date: "Dec 9, 2025", time: "3:30 PM", duration: "60 min", status: "upcoming", type: "Treatment", location: "Room 302", notes: "Skin allergy treatment session", phone: "+234 804 567 8901" },
-    { id: "5", patient: "Emeka Nwankwo", patientAge: 38, doctor: "Dr. Oluwaseun Adeyemi", specialty: "General Medicine", date: "Dec 9, 2025", time: "9:00 AM", duration: "30 min", status: "completed", type: "Check-up", location: "Room 101", notes: "Malaria treatment follow-up", phone: "+234 805 678 9012" },
-    { id: "6", patient: "Fatima Abubakar", patientAge: 29, doctor: "Dr. Amara Obi", specialty: "Cardiology", date: "Dec 9, 2025", time: "4:00 PM", duration: "45 min", status: "cancelled", type: "Consultation", location: "Room 203", notes: "Prenatal cardiac screening - rescheduled by patient", phone: "+234 806 789 0123" },
-]
 
 export default function AdminAppointmentsPage() {
+    const [mockAppointments, setAppointments] = useState<AdminAppointmentRow[]>([])
+    const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        adminApi
+            .getAppointments()
+            .then((res) => {
+                if (cancelled) return
+                setAppointments(
+                    res.appointments.map((a) => ({
+                        id: a.id,
+                        patient: a.patient_name,
+                        patientAge: "—",
+                        doctor: "—",
+                        specialty: "—",
+                        date: a.scheduled_date
+                            ? new Date(a.scheduled_date).toLocaleDateString(undefined, {
+                                  month: "short", day: "numeric", year: "numeric",
+                              })
+                            : "—",
+                        time: a.scheduled_time ?? "—",
+                        duration: a.duration_minutes ? `${a.duration_minutes} min` : "—",
+                        status: (a.status ?? "unknown").toLowerCase(),
+                        type: a.type ?? "—",
+                        location: a.location ?? "—",
+                        notes: a.notes ?? "",
+                        phone: "—",
+                    })),
+                )
+            })
+            .catch((e) => { if (!cancelled) setLoadError(e?.message || "Could not load appointments.") })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [])
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "in-progress" | "upcoming" | "cancelled">("all")
     const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-    const [selectedAppointment, setSelectedAppointment] = useState<typeof mockAppointments[0] | null>(null)
+    const [selectedAppointment, setSelectedAppointment] = useState<AdminAppointmentRow | null>(null)
 
     useEffect(() => setMounted(true), [])
 
